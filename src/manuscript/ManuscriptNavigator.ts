@@ -97,7 +97,10 @@ export class ManuscriptNavigator extends ItemView {
 	 * Render empty state when no book.json found
 	 */
 	private renderEmptyState(): void {
-		const emptyContainer = this.containerEl.createDiv({ cls: 'manuscript-empty-state' });
+		// Render header with close button even in empty state
+		this.renderEmptyHeader();
+
+		const emptyContainer = this.contentEl.createDiv({ cls: 'manuscript-empty-state' });
 
 		emptyContainer.createEl('h3', { text: 'No Manuscript Project Found' });
 		emptyContainer.createEl('p', {
@@ -151,10 +154,30 @@ export class ManuscriptNavigator extends ItemView {
 	}
 
 	/**
+	 * Render simplified header for empty state
+	 */
+	private renderEmptyHeader(): void {
+		const header = this.contentEl.createDiv({ cls: 'manuscript-navigator-header' });
+
+		const titleEl = header.createEl('h2', { text: 'Manuscript Navigator' });
+
+		const buttonContainer = header.createDiv({ cls: 'manuscript-header-buttons' });
+
+		const closeButton = buttonContainer.createEl('button', {
+			cls: 'manuscript-close-button',
+			attr: { 'aria-label': 'Close' },
+		});
+		closeButton.innerHTML = '✕';
+		closeButton.addEventListener('click', () => {
+			this.plugin.app.workspace.detachLeavesOfType(MANUSCRIPT_NAVIGATOR_VIEW_TYPE);
+		});
+	}
+
+	/**
 	 * Render header with title and settings button
 	 */
 	private renderHeader(): void {
-		const header = this.containerEl.createDiv({ cls: 'manuscript-navigator-header' });
+		const header = this.contentEl.createDiv({ cls: 'manuscript-navigator-header' });
 
 		const config = this.configManager.getConfig();
 		const title = config?.metadata?.title || 'Manuscript Navigator';
@@ -166,7 +189,9 @@ export class ManuscriptNavigator extends ItemView {
 			new Notice('Manuscript statistics refreshed');
 		});
 
-		const settingsButton = header.createEl('button', {
+		const buttonContainer = header.createDiv({ cls: 'manuscript-header-buttons' });
+
+		const settingsButton = buttonContainer.createEl('button', {
 			cls: 'manuscript-settings-button',
 			attr: { 'aria-label': 'Settings' },
 		});
@@ -175,6 +200,15 @@ export class ManuscriptNavigator extends ItemView {
 			// Open settings to manuscript section
 			(this.plugin.app as any).setting.open();
 			(this.plugin.app as any).setting.openTabById(this.plugin.manifest.id);
+		});
+
+		const closeButton = buttonContainer.createEl('button', {
+			cls: 'manuscript-close-button',
+			attr: { 'aria-label': 'Close' },
+		});
+		closeButton.innerHTML = '✕';
+		closeButton.addEventListener('click', () => {
+			this.plugin.app.workspace.detachLeavesOfType(MANUSCRIPT_NAVIGATOR_VIEW_TYPE);
 		});
 	}
 

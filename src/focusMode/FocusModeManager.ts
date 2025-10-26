@@ -31,6 +31,9 @@ export class FocusModeManager {
 		if (this.isActive) return;
 
 		this.isActive = true;
+		this.plugin.settings.focusMode.enabled = true;
+		this.plugin.saveSettings();
+
 		const settings = this.plugin.settings.focusMode;
 
 		// Apply markdown concealment via CSS
@@ -68,14 +71,23 @@ export class FocusModeManager {
 	 * Disable Focus Mode
 	 */
 	disable(): void {
-		if (!this.isActive) return;
+		// Don't use early return - always allow disable to clean up state
+		// This handles cases where settings and internal state might be out of sync
 
 		this.isActive = false;
+		this.plugin.settings.focusMode.enabled = false;
+		this.plugin.saveSettings();
 
-		// Remove CSS classes
+		// Remove all CSS classes
 		document.body.removeClass('latex-pandoc-focus-mode');
 		document.body.removeClass('focus-mode-markdown-concealed');
 		document.body.removeClass('focus-mode-centered');
+
+		// Remove individual concealment classes
+		document.body.removeClass('focus-mode-hide-headings');
+		document.body.removeClass('focus-mode-hide-lists');
+		document.body.removeClass('focus-mode-hide-blockquotes');
+		document.body.removeClass('focus-mode-hide-code-markers');
 
 		// Restore UI elements
 		if (this.uiState) {
@@ -85,6 +97,16 @@ export class FocusModeManager {
 		// Exit fullscreen
 		if (document.fullscreenElement) {
 			document.exitFullscreen();
+		}
+
+		// Force editor refresh to re-render visible content
+		const activeView = this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
+		if (activeView?.editor) {
+			// Trigger a refresh by dispatching a state effect
+			const editor = activeView.editor as any;
+			if (editor.cm) {
+				editor.cm.dispatch({});
+			}
 		}
 
 		// Update status bar
@@ -145,10 +167,7 @@ export class FocusModeManager {
 		document.body.addClass('focus-mode-centered');
 
 		// Set CSS custom property for line width
-		document.body.style.setProperty(
-			'--focus-line-width',
-			`${settings.lineWidth}ch`
-		);
+		document.body.style.setProperty('--focus-line-width', `${settings.lineWidth}ch`);
 	}
 
 	/**
@@ -161,7 +180,7 @@ export class FocusModeManager {
 		this.uiState = {
 			leftSidebarVisible: !this.app.workspace.leftSplit.collapsed,
 			rightSidebarVisible: !this.app.workspace.rightSplit.collapsed,
-			ribbonVisible: document.body.hasClass('is-hidden-frameless')
+			ribbonVisible: document.body.hasClass('is-hidden-frameless'),
 		};
 
 		// Hide left sidebar (file explorer)
@@ -211,7 +230,7 @@ export class FocusModeManager {
 	 */
 	private enterFullscreen(): void {
 		if (!document.fullscreenElement) {
-			document.documentElement.requestFullscreen().catch(err => {
+			document.documentElement.requestFullscreen().catch((err) => {
 				if (this.plugin.settings.debugMode) {
 					console.error('Failed to enter fullscreen:', err);
 				}

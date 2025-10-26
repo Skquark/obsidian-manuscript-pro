@@ -1,4 +1,4 @@
-import { MarkdownView, Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { MarkdownView, Plugin, Notice, WorkspaceLeaf, Menu } from 'obsidian';
 import { SettingsTab } from './settingsTab';
 import { EditorView } from '@codemirror/view';
 import { Extension } from '@codemirror/state';
@@ -18,6 +18,8 @@ import { CrossRefManager } from './crossref/CrossRefManager';
 import { createRefAutoComplete } from './crossref/refAutoComplete';
 import { LabelBrowser, LABEL_BROWSER_VIEW_TYPE } from './crossref/LabelBrowser';
 import { ManuscriptNavigator, MANUSCRIPT_NAVIGATOR_VIEW_TYPE } from './manuscript/ManuscriptNavigator';
+import { ManuscriptLoader } from './manuscript/ManuscriptLoader';
+import { ManuscriptEditorModal } from './manuscript/ManuscriptEditorModal';
 import { PrePublicationPanel, VALIDATION_PANEL_VIEW_TYPE } from './validation/PrePublicationPanel';
 import { ExportManager } from './export/ExportManager';
 import { ExportDialog } from './export/ExportDialog';
@@ -64,6 +66,7 @@ const DEFAULT_SETTINGS: PluginSettings = {
 
 	// UI
 	showStatusBar: true,
+	showRibbonIcon: true,
 	showConcealedCount: false,
 
 	// Focus Mode
@@ -119,6 +122,8 @@ const DEFAULT_SETTINGS: PluginSettings = {
 		showLabelBrowser: true,
 		validateOnSave: false,
 		indexOnStartup: true,
+		maxFilesToIndex: 1000, // Limit for very large vaults (0 = unlimited)
+		showIndexStats: true, // Show index statistics in console/notices
 	},
 
 	// Manuscript Navigator
@@ -271,10 +276,25 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	},
 };
 
+/**
+ * Create a RegExp with 'd' flag for indices support, falling back to 'gm' if not supported
+ */
+function createRegexWithFallback(pattern: string): RegExp {
+	try {
+		// Try with 'd' flag for indices support (newer Electron/browsers)
+		return new RegExp(pattern, 'gmd');
+	} catch (e) {
+		// Fallback to 'gm' if 'd' flag is not supported (older Electron)
+		// The conceal-view-plugin has fallback logic to handle missing indices
+		return new RegExp(pattern, 'gm');
+	}
+}
+
 export default class ManuscriptProPlugin extends Plugin {
 	settings: PluginSettings;
 	editorExtensions: Extension[] = [];
 	statusBarItem: HTMLElement | null = null;
+	ribbonIconEl: HTMLElement | null = null;
 	focusModeManager: FocusModeManager;
 	profileManager: ProfileManager;
 	profileDropdown: ProfileDropdown | null = null;
@@ -394,8 +414,8 @@ export default class ManuscriptProPlugin extends Plugin {
 				}
 
 				// Create regex with proper flags (g=global, m=multiline, d=indices)
-				const regex = new RegExp(pattern.regexString, 'gmd');
-				this.editorExtensions.push(concealViewPlugin(regex, this.settings));
+				const regex = createRegexWithFallback(pattern.regexString);
+				this.editorExtensions.push(concealViewPlugin(regex, this.settings, pattern.replacement));
 			});
 		});
 
@@ -403,7 +423,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.settings.customPatterns.forEach((regexString) => {
 			if (!regexString) return;
 			try {
-				const regex = new RegExp(regexString, 'gmd');
+				const regex = createRegexWithFallback(regexString);
 				this.editorExtensions.push(concealViewPlugin(regex, this.settings));
 			} catch (e) {
 				if (this.settings.debugMode) {
@@ -501,6 +521,651 @@ export default class ManuscriptProPlugin extends Plugin {
 				this.settings.enabled ?
 					`Manuscript Pro: Active (${enabledGroupsCount} groups enabled)\nClick to toggle`
 				:	'Manuscript Pro: Inactive\nClick to toggle';
+		}
+	}
+
+	setupRibbon() {
+		if (this.settings.showRibbonIcon) {
+			this.ribbonIconEl = this.addRibbonIcon('scroll', 'Manuscript Pro', (evt: MouseEvent) => {
+				// Create a comprehensive menu with organized sections
+				const menu = new Menu();
+
+				// === MAIN TOGGLE ===
+				menu.addItem((item) => {
+					const icon = this.settings.enabled ? 'eye' : 'eye-off';
+					item
+						.setTitle(this.settings.enabled ? 'Disable Concealment' : 'Enable Concealment')
+						.setIcon(icon)
+						.onClick(() => {
+							this.toggleConcealer();
+						});
+				});
+
+				menu.addSeparator();
+
+				// === EXPORT SUBMENU ===
+				menu.addItem((item) => {
+					item.setTitle('📤 Export →').onClick((evt: MouseEvent) => {
+						const exportMenu = new Menu();
+
+						const activeFile = this.app.workspace.getActiveFile();
+
+						// Export current file
+						if (activeFile) {
+							exportMenu.addItem((subItem) => {
+								subItem
+									.setTitle('Export Current File...')
+									.setIcon('file')
+									.onClick(() => {
+										const dialog = new ExportDialog(
+											this.app,
+											this,
+											[activeFile],
+											async (profile, files, outputPath) => {
+												await this.exportManager.exportFiles(files, profile.id, outputPath);
+											},
+										);
+										dialog.open();
+									});
+							});
+
+							exportMenu.addSeparator();
+
+							// Quick exports
+							exportMenu.addItem((subItem) => {
+								subItem
+									.setTitle('Quick Export to PDF')
+									.setIcon('file-text')
+									.onClick(() => {
+										this.exportManager.exportFiles([activeFile], 'pdf-academic');
+									});
+							});
+
+							exportMenu.addItem((subItem) => {
+								subItem
+									.setTitle('Quick Export to DOCX')
+									.setIcon('file-text')
+									.onClick(() => {
+										this.exportManager.exportFiles([activeFile], 'docx-standard');
+									});
+							});
+
+							exportMenu.addItem((subItem) => {
+								subItem
+									.setTitle('Quick Export to HTML')
+									.setIcon('code')
+									.onClick(() => {
+										this.exportManager.exportFiles([activeFile], 'html-web');
+									});
+							});
+
+							exportMenu.addItem((subItem) => {
+								subItem
+									.setTitle('Quick Export to EPUB')
+									.setIcon('book')
+									.onClick(() => {
+										this.exportManager.exportFiles([activeFile], 'epub-ebook');
+									});
+							});
+
+							exportMenu.addSeparator();
+						}
+
+						// Export manuscript
+						exportMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Export Manuscript Project...')
+								.setIcon('files')
+								.onClick(() => {
+									const dialog = new ExportDialog(this.app, this, [], async (profile, files, outputPath) => {
+										await this.exportManager.exportManuscript(profile.id);
+									});
+									dialog.open();
+								});
+						});
+
+						exportMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				// === CITATIONS SUBMENU ===
+				menu.addItem((item) => {
+					item.setTitle('📚 Citations & Bibliography →').onClick((evt: MouseEvent) => {
+						const citMenu = new Menu();
+
+						citMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Import from DOI/arXiv/PubMed...')
+								.setIcon('download')
+								.onClick(() => {
+									const dialog = new CitationImportDialog(this.app, this, async (result) => {
+										if (result.success && result.entry) {
+											this.bibliographyManager.addEntry(result.entry.key, result.entry);
+											const bibFile = this.settings.citations.bibliographyFile;
+											if (bibFile) {
+												await this.bibliographyManager.saveToBibFile(bibFile);
+											}
+										}
+									});
+									dialog.open();
+								});
+						});
+
+						citMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Reload Bibliography')
+								.setIcon('refresh-cw')
+								.onClick(async () => {
+									this.bibliographyManager.invalidateCache();
+									await loadBibliographyForActiveFile(this);
+									const stats = this.bibliographyManager.getStats();
+									new Notice(`Bibliography reloaded: ${stats.totalEntries} entries from ${stats.filesLoaded} files`);
+								});
+						});
+
+						citMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Detect Duplicate Citations')
+								.setIcon('copy')
+								.onClick(async () => {
+									const allEntries = this.bibliographyManager.getAllCitations();
+									const threshold = this.settings.enhancedBib?.duplicateSimilarityThreshold || 0.8;
+									const duplicates = this.duplicateDetector.findDuplicates(allEntries, threshold);
+
+									if (duplicates.length === 0) {
+										new Notice('✓ No duplicate citations found');
+										return;
+									}
+
+									const dialog = new DuplicateManagementDialog(
+										this.app,
+										this,
+										duplicates,
+										async (canonical, duplicateKeys) => {
+											const canonicalEntry = allEntries.get(canonical);
+											if (!canonicalEntry) return;
+
+											for (const dupKey of duplicateKeys) {
+												const dupEntry = allEntries.get(dupKey);
+												if (dupEntry) {
+													const merged = this.duplicateDetector.mergeDuplicates(canonicalEntry, dupEntry);
+													this.bibliographyManager.addEntry(canonical, merged);
+													this.bibliographyManager.removeEntry(dupKey);
+												}
+											}
+
+											const bibFile = this.settings.citations.bibliographyFile;
+											if (bibFile) {
+												await this.bibliographyManager.saveToBibFile(bibFile);
+											}
+
+											new Notice(`✓ Merged ${duplicateKeys.length} duplicate(s) into ${canonical}`);
+										},
+									);
+									dialog.open();
+								});
+						});
+
+						citMenu.addSeparator();
+
+						citMenu.addItem((subItem) => {
+							subItem
+								.setTitle(this.settings.citations.enabled ? '✓ Citation Preview' : 'Citation Preview')
+								.setChecked(this.settings.citations.enabled)
+								.onClick(async () => {
+									this.settings.citations.enabled = !this.settings.citations.enabled;
+									await this.saveSettings();
+									this.updateEditorExtension();
+									new Notice(`Citation Preview ${this.settings.citations.enabled ? 'enabled' : 'disabled'}`);
+								});
+						});
+
+						citMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				// === CROSS-REFERENCES SUBMENU ===
+				menu.addItem((item) => {
+					item.setTitle('🔗 Cross-References →').onClick((evt: MouseEvent) => {
+						const xrefMenu = new Menu();
+
+						xrefMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Open Label Browser')
+								.setIcon('tag')
+								.onClick(() => {
+									this.activateLabelBrowser();
+								});
+						});
+
+						xrefMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Index All Labels')
+								.setIcon('refresh-cw')
+								.onClick(async () => {
+									const startTime = Date.now();
+									await this.crossRefManager.indexVault();
+									const duration = Date.now() - startTime;
+									const stats = this.crossRefManager.getStats();
+
+									const totalFiles = this.app.vault.getMarkdownFiles().length;
+									const skipped = totalFiles - stats.filesIndexed;
+
+									let message = `✓ Indexed ${stats.totalLabels} labels from ${stats.filesIndexed} files`;
+									if (skipped > 0) {
+										message += ` (${skipped} files skipped due to limit)`;
+									}
+									message += ` in ${duration}ms`;
+
+									new Notice(message);
+								});
+						});
+
+						xrefMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Validate All References')
+								.setIcon('check-circle')
+								.onClick(async () => {
+									const issues = this.crossRefManager.validateReferences();
+									if (issues.length === 0) {
+										new Notice('✓ All references are valid!');
+									} else {
+										const errors = issues.filter((i) => i.severity === 'error').length;
+										const warnings = issues.filter((i) => i.severity === 'warning').length;
+										new Notice(`Found ${errors} errors and ${warnings} warnings`);
+										console.log('Reference validation issues:', issues);
+									}
+								});
+						});
+
+						xrefMenu.addSeparator();
+
+						xrefMenu.addItem((subItem) => {
+							subItem
+								.setTitle(
+									this.settings.crossRef.enabled ? '✓ Cross-Reference Intelligence' : 'Cross-Reference Intelligence',
+								)
+								.setChecked(this.settings.crossRef.enabled)
+								.onClick(async () => {
+									this.settings.crossRef.enabled = !this.settings.crossRef.enabled;
+									await this.saveSettings();
+									this.updateEditorExtension();
+									new Notice(`Cross-Reference Intelligence ${this.settings.crossRef.enabled ? 'enabled' : 'disabled'}`);
+								});
+						});
+
+						xrefMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				// === MANUSCRIPT TOOLS SUBMENU ===
+				menu.addItem((item) => {
+					item.setTitle('📋 Manuscript Tools →').onClick((evt: MouseEvent) => {
+						const msMenu = new Menu();
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Open Manuscript Navigator')
+								.setIcon('list-tree')
+								.onClick(() => {
+									this.activateManuscriptNavigator();
+								});
+						});
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Edit Manuscript Project')
+								.setIcon('edit')
+								.onClick(async () => {
+									await this.openManuscriptEditor();
+								});
+						});
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Open Pre-publication Checklist')
+								.setIcon('clipboard-check')
+								.onClick(() => {
+									this.activateValidationPanel();
+								});
+						});
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Run Validation')
+								.setIcon('shield-check')
+								.onClick(async () => {
+									await this.activateValidationPanel();
+									const leaves = this.app.workspace.getLeavesOfType(VALIDATION_PANEL_VIEW_TYPE);
+									if (leaves.length > 0) {
+										const view = leaves[0].view;
+										if (view instanceof PrePublicationPanel) {
+											await view.runValidation();
+										}
+									}
+								});
+						});
+
+						msMenu.addSeparator();
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Open Statistics Panel')
+								.setIcon('bar-chart-2')
+								.onClick(() => {
+									this.activateStatsView();
+								});
+						});
+
+						msMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Refresh Statistics')
+								.setIcon('refresh-cw')
+								.onClick(async () => {
+									const leaves = this.app.workspace.getLeavesOfType(STATS_VIEW_TYPE);
+									if (leaves.length > 0) {
+										const view = leaves[0].view;
+										if (view instanceof StatsPanel) {
+											await view.refresh();
+											new Notice('Statistics refreshed');
+										}
+									}
+								});
+						});
+
+						msMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				// === TEMPLATES & SNIPPETS SUBMENU ===
+				menu.addItem((item) => {
+					item.setTitle('📝 Templates & Snippets →').onClick((evt: MouseEvent) => {
+						const templMenu = new Menu();
+
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Insert Template...')
+								.setIcon('layout-template')
+								.onClick(() => {
+									if (!this.settings.templates?.enabled) {
+										new Notice('Templates are disabled in settings');
+										return;
+									}
+
+									const templates = this.templateManager.getAllTemplates();
+									const selector = new TemplateSelectorModal(this.app, templates, (template) => {
+										const variableDialog = new TemplateVariableModal(
+											this.app,
+											template,
+											async (values) => {
+												const result = await this.templateManager.insertTemplate({
+													template,
+													variableValues: values,
+													insertAtCursor: true,
+												});
+
+												if (!result.success) {
+													new Notice(`Failed to insert template: ${result.error}`);
+												}
+											},
+											this,
+										);
+										variableDialog.open();
+									});
+									selector.open();
+								});
+						});
+
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Insert Snippet...')
+								.setIcon('code')
+								.onClick(() => {
+									if (!this.settings.templates?.enabled) {
+										new Notice('Snippets are disabled in settings');
+										return;
+									}
+
+									const snippets = this.snippetManager.getAllSnippets();
+									const selector = new SnippetSelectorModal(this.app, snippets, (snippet) => {
+										const variableDialog = new TemplateVariableModal(
+											this.app,
+											snippet,
+											async (values) => {
+												const result = await this.snippetManager.insertSnippet({
+													snippet,
+													variableValues: values,
+													insertAtCursor: true,
+												});
+
+												if (!result.success) {
+													new Notice(`Failed to insert snippet: ${result.error}`);
+												}
+											},
+											this,
+										);
+										variableDialog.open();
+									});
+									selector.open();
+								});
+						});
+
+						templMenu.addSeparator();
+
+						// Quick snippets
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Insert Figure')
+								.setIcon('image')
+								.onClick(() => {
+									const snippet = this.snippetManager.getSnippet('figure-latex');
+									if (!snippet) {
+										new Notice('Figure snippet not found');
+										return;
+									}
+
+									const variableDialog = new TemplateVariableModal(
+										this.app,
+										snippet,
+										async (values) => {
+											const result = await this.snippetManager.insertSnippet({
+												snippet,
+												variableValues: values,
+												insertAtCursor: true,
+											});
+
+											if (!result.success) {
+												new Notice(`Failed to insert figure: ${result.error}`);
+											}
+										},
+										this,
+									);
+									variableDialog.open();
+								});
+						});
+
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Insert Table')
+								.setIcon('table')
+								.onClick(() => {
+									const snippet = this.snippetManager.getSnippet('table-basic');
+									if (!snippet) {
+										new Notice('Table snippet not found');
+										return;
+									}
+
+									const variableDialog = new TemplateVariableModal(
+										this.app,
+										snippet,
+										async (values) => {
+											const result = await this.snippetManager.insertSnippet({
+												snippet,
+												variableValues: values,
+												insertAtCursor: true,
+											});
+
+											if (!result.success) {
+												new Notice(`Failed to insert table: ${result.error}`);
+											}
+										},
+										this,
+									);
+									variableDialog.open();
+								});
+						});
+
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Insert Equation')
+								.setIcon('sigma')
+								.onClick(() => {
+									const snippet = this.snippetManager.getSnippet('equation-display');
+									if (!snippet) {
+										new Notice('Equation snippet not found');
+										return;
+									}
+
+									const variableDialog = new TemplateVariableModal(
+										this.app,
+										snippet,
+										async (values) => {
+											const result = await this.snippetManager.insertSnippet({
+												snippet,
+												variableValues: values,
+												insertAtCursor: true,
+											});
+
+											if (!result.success) {
+												new Notice(`Failed to insert equation: ${result.error}`);
+											}
+										},
+										this,
+									);
+									variableDialog.open();
+								});
+						});
+
+						templMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				menu.addSeparator();
+
+				// === CONCEALMENT GROUPS ===
+				menu.addItem((item) => {
+					item.setTitle('👁️ Concealment Groups →').onClick((evt: MouseEvent) => {
+						const groupMenu = new Menu();
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Math Delimiters')
+								.setChecked(this.settings.groups.mathDelimiters)
+								.onClick(() => {
+									this.toggleGroup('mathDelimiters', 'Math Delimiters');
+								});
+						});
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Citations')
+								.setChecked(this.settings.groups.citations)
+								.onClick(() => {
+									this.toggleGroup('citations', 'Citations');
+								});
+						});
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('LaTeX Commands')
+								.setChecked(this.settings.groups.latexCommands)
+								.onClick(() => {
+									this.toggleGroup('latexCommands', 'LaTeX Commands');
+								});
+						});
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Pandoc Markup')
+								.setChecked(this.settings.groups.pandocMarkup)
+								.onClick(() => {
+									this.toggleGroup('pandocMarkup', 'Pandoc Markup');
+								});
+						});
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Indexing & Metadata')
+								.setChecked(this.settings.groups.indexingMeta)
+								.onClick(() => {
+									this.toggleGroup('indexingMeta', 'Indexing & Metadata');
+								});
+						});
+
+						groupMenu.addSeparator();
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Hide All Syntax')
+								.setIcon('eye-off')
+								.onClick(() => {
+									this.settings.groups.mathDelimiters = true;
+									this.settings.groups.citations = true;
+									this.settings.groups.latexCommands = true;
+									this.settings.groups.pandocMarkup = true;
+									this.settings.groups.indexingMeta = true;
+									this.saveSettings();
+									this.updateEditorExtension();
+									new Notice('All syntax groups enabled');
+								});
+						});
+
+						groupMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Show All Syntax')
+								.setIcon('eye')
+								.onClick(() => {
+									this.settings.groups.mathDelimiters = false;
+									this.settings.groups.citations = false;
+									this.settings.groups.latexCommands = false;
+									this.settings.groups.pandocMarkup = false;
+									this.settings.groups.indexingMeta = false;
+									this.saveSettings();
+									this.updateEditorExtension();
+									new Notice('All syntax groups disabled (showing original markup)');
+								});
+						});
+
+						groupMenu.showAtMouseEvent(evt);
+					});
+				});
+
+				// === FOCUS MODE ===
+				menu.addItem((item) => {
+					const enabled = this.settings.focusMode.enabled;
+					item.setTitle(enabled ? '🎯 Exit Focus Mode' : '🎯 Enter Focus Mode').onClick(() => {
+						if (enabled) {
+							this.focusModeManager.disable();
+						} else {
+							this.focusModeManager.enable();
+						}
+					});
+				});
+
+				menu.addSeparator();
+
+				// === SETTINGS ===
+				menu.addItem((item) => {
+					item.setTitle('⚙️ Settings').onClick(() => {
+						// Open plugin settings
+						(this.app as any).setting.open();
+						(this.app as any).setting.openTabById(this.manifest.id);
+					});
+				});
+
+				// Show menu at cursor position
+				menu.showAtMouseEvent(evt);
+			});
 		}
 	}
 
@@ -766,9 +1431,32 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'index-labels',
 			name: 'Index All Labels',
 			callback: async () => {
+				const startTime = Date.now();
 				await this.crossRefManager.indexVault();
+				const duration = Date.now() - startTime;
 				const stats = this.crossRefManager.getStats();
-				new Notice(`Indexed ${stats.totalLabels} labels from ${stats.filesIndexed} files`);
+
+				const totalFiles = this.app.vault.getMarkdownFiles().length;
+				const skipped = totalFiles - stats.filesIndexed;
+
+				let message = `✓ Indexed ${stats.totalLabels} labels from ${stats.filesIndexed} files`;
+				if (skipped > 0) {
+					message += ` (${skipped} files skipped due to limit)`;
+				}
+				message += ` in ${duration}ms`;
+
+				new Notice(message);
+
+				if (this.settings.crossRef.showIndexStats) {
+					console.log(`CrossRef Index Stats:`, {
+						labels: stats.totalLabels,
+						files: stats.filesIndexed,
+						totalFiles: totalFiles,
+						skipped: skipped,
+						duration: `${duration}ms`,
+						labelsPerFile: (stats.totalLabels / stats.filesIndexed).toFixed(2),
+					});
+				}
 			},
 		});
 
@@ -1252,7 +1940,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'start-writing-session',
 			name: 'Start Writing Session',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -1272,7 +1960,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'end-writing-session',
 			name: 'End Writing Session',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -1292,7 +1980,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'show-progress-stats',
 			name: 'Show Progress Statistics',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -1315,7 +2003,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'add-research-fact',
 			name: 'Add Research Fact',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -1330,7 +2018,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'search-research-bible',
 			name: 'Search Research Bible',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -1344,7 +2032,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'check-terminology-consistency',
 			name: 'Check Terminology Consistency',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -1371,12 +2059,12 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-glossary',
 			name: 'Export Glossary',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
 
-				const format = this.settings.quality.researchBible.exportFormat || 'markdown';
+				const format = this.settings.phase4.researchBible.exportFormat || 'markdown';
 				const glossary = this.researchBible.exportGlossary(format);
 
 				new Notice(`Glossary exported to console as ${format}`);
@@ -1389,7 +2077,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-readability',
 			name: 'Analyze Document Readability',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -1411,7 +2099,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-section-readability',
 			name: 'Analyze Section Readability',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -1434,7 +2122,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-readability-report',
 			name: 'Export Readability Report',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -1525,13 +2213,13 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.researchBible = new ResearchBibleManager(this);
 		this.readabilityAnalyzer = new ReadabilityAnalyzer(this);
 
-		if (this.settings.quality?.checklist?.enabled) {
+		if (this.settings.phase4?.checklist?.enabled) {
 			await this.checklistManager.initialize();
 		}
-		if (this.settings.quality?.progress?.enabled) {
+		if (this.settings.phase4?.progress?.enabled) {
 			await this.progressManager.initialize();
 		}
-		if (this.settings.quality?.researchBible?.enabled) {
+		if (this.settings.phase4?.researchBible?.enabled) {
 			await this.researchBible.initialize();
 		}
 
@@ -1559,10 +2247,10 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.setupStatusBar();
 		this.addSettingTab(new SettingsTab(this.app, this));
 
-		// Open stats panel if enabled
-		if (this.settings.statistics.enabled && this.settings.statistics.showInSidebar) {
-			this.activateStatsView();
-		}
+		// Defer ribbon icon creation to position it after other plugins
+		this.app.workspace.onLayoutReady(() => {
+			this.setupRibbon();
+		});
 
 		// Load bibliography for active file
 		if (this.settings.citations.enabled) {
@@ -1578,15 +2266,24 @@ export default class ManuscriptProPlugin extends Plugin {
 			}
 		}
 
-		// Open label browser if enabled
-		if (this.settings.crossRef.enabled && this.settings.crossRef.showLabelBrowser) {
-			this.activateLabelBrowser();
-		}
+		// Delay sidebar view initialization until workspace is fully loaded
+		// This prevents "Cannot read properties of null" errors during startup
+		this.app.workspace.onLayoutReady(() => {
+			// Open stats panel if enabled
+			if (this.settings.statistics.enabled && this.settings.statistics.showInSidebar) {
+				this.activateStatsView();
+			}
 
-		// Open manuscript navigator if enabled
-		if (this.settings.manuscriptNavigator.enabled && this.settings.manuscriptNavigator.showInSidebar) {
-			this.activateManuscriptNavigator();
-		}
+			// Open label browser if enabled
+			if (this.settings.crossRef.enabled && this.settings.crossRef.showLabelBrowser) {
+				this.activateLabelBrowser();
+			}
+
+			// Open manuscript navigator if enabled
+			if (this.settings.manuscriptNavigator.enabled && this.settings.manuscriptNavigator.showInSidebar) {
+				this.activateManuscriptNavigator();
+			}
+		});
 
 		// Enable Focus Mode if it was active
 		if (this.settings.focusMode.enabled) {
@@ -1610,13 +2307,20 @@ export default class ManuscriptProPlugin extends Plugin {
 			leaf = leaves[0];
 		} else {
 			// Create new view in right sidebar
-			const rightLeaf = workspace.getRightLeaf(false);
-			if (rightLeaf) {
-				await rightLeaf.setViewState({
-					type: STATS_VIEW_TYPE,
-					active: true,
-				});
-				leaf = rightLeaf;
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: STATS_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create stats view in sidebar:', error);
+				}
+				return;
 			}
 		}
 
@@ -1636,13 +2340,20 @@ export default class ManuscriptProPlugin extends Plugin {
 			leaf = leaves[0];
 		} else {
 			// Create new view in right sidebar
-			const rightLeaf = workspace.getRightLeaf(false);
-			if (rightLeaf) {
-				await rightLeaf.setViewState({
-					type: LABEL_BROWSER_VIEW_TYPE,
-					active: true,
-				});
-				leaf = rightLeaf;
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: LABEL_BROWSER_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create label browser in sidebar:', error);
+				}
+				return;
 			}
 		}
 
@@ -1662,18 +2373,55 @@ export default class ManuscriptProPlugin extends Plugin {
 			leaf = leaves[0];
 		} else {
 			// Create new view in left sidebar
-			const leftLeaf = workspace.getLeftLeaf(false);
-			if (leftLeaf) {
-				await leftLeaf.setViewState({
-					type: MANUSCRIPT_NAVIGATOR_VIEW_TYPE,
-					active: true,
-				});
-				leaf = leftLeaf;
+			try {
+				const leftLeaf = workspace.getLeftLeaf(false);
+				if (leftLeaf) {
+					await leftLeaf.setViewState({
+						type: MANUSCRIPT_NAVIGATOR_VIEW_TYPE,
+						active: true,
+					});
+					leaf = leftLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create manuscript navigator in sidebar:', error);
+				}
+				return;
 			}
 		}
 
 		if (leaf) {
 			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async openManuscriptEditor() {
+		const loader = new ManuscriptLoader(this.app.vault);
+
+		// Find manifest file
+		const manifestFile = await loader.findManifest();
+
+		if (!manifestFile) {
+			new Notice('No manuscript project found. Please create book-manifest.json, manuscript.json, or book.json');
+			return;
+		}
+
+		try {
+			// Load manuscript
+			const manuscript = await loader.loadManuscript(manifestFile);
+
+			// Validate
+			const validation = loader.validate(manuscript);
+			if (validation.errors.length > 0) {
+				new Notice(`⚠ Manuscript has ${validation.errors.length} errors`);
+			}
+
+			// Open editor modal
+			const modal = new ManuscriptEditorModal(this.app, this, manifestFile, manuscript);
+			modal.open();
+		} catch (error) {
+			new Notice('Failed to load manuscript project');
+			console.error('Manuscript load error:', error);
 		}
 	}
 

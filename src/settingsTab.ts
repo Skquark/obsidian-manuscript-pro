@@ -602,6 +602,16 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName('Show ribbon icon')
+			.setDesc('Display Manuscript Pro icon in the left sidebar ribbon (requires restart)')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
+					this.plugin.settings.showRibbonIcon = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName('Show concealed count')
 			.setDesc('Display count of concealed items in status bar')
 			.addToggle((toggle) =>
@@ -1061,6 +1071,32 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.crossRef.indexOnStartup).onChange(async (value) => {
 					this.plugin.settings.crossRef.indexOnStartup = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Max Files to Index')
+			.setDesc('Limit indexing for very large vaults (0 = unlimited). Helps performance with 1000+ files.')
+			.addText((text) =>
+				text
+					.setValue(String(this.plugin.settings.crossRef.maxFilesToIndex))
+					.setPlaceholder('1000')
+					.onChange(async (value) => {
+						const num = parseInt(value);
+						if (!isNaN(num) && num >= 0) {
+							this.plugin.settings.crossRef.maxFilesToIndex = num;
+							await this.plugin.saveSettings();
+						}
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show Index Statistics')
+			.setDesc('Display indexing stats in console (files indexed, labels found, warnings)')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.crossRef.showIndexStats).onChange(async (value) => {
+					this.plugin.settings.crossRef.showIndexStats = value;
 					await this.plugin.saveSettings();
 				}),
 			);

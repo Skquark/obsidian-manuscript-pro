@@ -15,6 +15,8 @@ export class StatsPanel extends ItemView {
 	private stats: ManuscriptStats | null = null;
 	private refreshInterval: number | null = null;
 	private currentTab: 'overview' | 'details' | 'history' | 'goals' = 'overview';
+	private lastContent: string = '';
+	private isRefreshing: boolean = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: LatexPandocConcealerPlugin) {
 		super(leaf);
@@ -43,13 +45,18 @@ export class StatsPanel extends ItemView {
 	}
 
 	/**
-	 * Start automatic refresh every 5 seconds
+	 * Start automatic refresh using configured interval
 	 */
 	private startAutoRefresh(): void {
 		this.stopAutoRefresh();
+		const intervalMs = this.plugin.settings.statistics.refreshInterval * 1000;
 		this.refreshInterval = window.setInterval(() => {
+			// Only refresh if the panel is visible and there's an active view
+			if (!this.containerEl.isShown()) {
+				return;
+			}
 			this.refresh();
-		}, 5000);
+		}, intervalMs);
 	}
 
 	/**
@@ -66,23 +73,45 @@ export class StatsPanel extends ItemView {
 	 * Refresh statistics
 	 */
 	async refresh(): Promise<void> {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!activeView) {
-			this.stats = null;
-			await this.renderPanel();
+		// Prevent concurrent refreshes
+		if (this.isRefreshing) {
 			return;
 		}
 
-		const content = activeView.editor.getValue();
-		const calculator = new StatsCalculator(
-			content,
-			this.plugin.settings,
-			this.plugin.statsData.sessionWordCount,
-			this.getTodayWordCount(),
-		);
+		this.isRefreshing = true;
 
-		this.stats = calculator.calculateAll();
-		await this.renderPanel();
+		try {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!activeView) {
+				if (this.stats !== null) {
+					this.stats = null;
+					this.lastContent = '';
+					await this.renderPanel();
+				}
+				return;
+			}
+
+			const content = activeView.editor.getValue();
+
+			// Skip refresh if content hasn't changed
+			if (content === this.lastContent) {
+				return;
+			}
+
+			this.lastContent = content;
+
+			const calculator = new StatsCalculator(
+				content,
+				this.plugin.settings,
+				this.plugin.statsData.sessionWordCount,
+				this.getTodayWordCount(),
+			);
+
+			this.stats = calculator.calculateAll();
+			await this.renderPanel();
+		} finally {
+			this.isRefreshing = false;
+		}
 	}
 
 	/**
@@ -113,12 +142,23 @@ export class StatsPanel extends ItemView {
 		const header = contentEl.createDiv({ cls: 'stats-header' });
 		header.createEl('h4', { text: 'Manuscript Statistics', cls: 'stats-title' });
 
-		const refreshButton = header.createEl('button', {
+		const buttonContainer = header.createDiv({ cls: 'stats-header-buttons' });
+
+		const refreshButton = buttonContainer.createEl('button', {
 			text: '↻',
 			cls: 'stats-refresh-button',
 		});
 		refreshButton.title = 'Refresh statistics';
 		refreshButton.onclick = () => this.refresh();
+
+		const closeButton = buttonContainer.createEl('button', {
+			text: '✕',
+			cls: 'stats-close-button',
+		});
+		closeButton.title = 'Close';
+		closeButton.onclick = () => {
+			this.app.workspace.detachLeavesOfType(STATS_VIEW_TYPE);
+		};
 
 		// Tabs
 		const tabBar = contentEl.createDiv({ cls: 'stats-tab-bar' });
@@ -185,16 +225,8 @@ export class StatsPanel extends ItemView {
 		const wordStats = wordCountSection.createDiv({ cls: 'stats-grid' });
 
 		this.createStatItem(wordStats, 'Total Words', this.stats.wordCount.total.toLocaleString());
-		this.createStatItem(
-			wordStats,
-			'Excluding Quotes',
-			this.stats.wordCount.excludingQuotes.toLocaleString(),
-		);
-		this.createStatItem(
-			wordStats,
-			'Session Words',
-			this.stats.wordCount.session.toLocaleString(),
-		);
+		this.createStatItem(wordStats, 'Excluding Quotes', this.stats.wordCount.excludingQuotes.toLocaleString());
+		this.createStatItem(wordStats, 'Session Words', this.stats.wordCount.session.toLocaleString());
 		this.createStatItem(wordStats, 'Today', this.stats.wordCount.today.toLocaleString());
 
 		// Reading Time
@@ -232,21 +264,13 @@ export class StatsPanel extends ItemView {
 
 		const qualityStats = qualitySection.createDiv({ cls: 'stats-grid' });
 		this.createStatItem(qualityStats, 'Readability', this.stats.content.readability.grade);
-		this.createStatItem(
-			qualityStats,
-			'F-K Score',
-			this.stats.content.readability.fleschKincaid.toString(),
-		);
+		this.createStatItem(qualityStats, 'F-K Score', this.stats.content.readability.fleschKincaid.toString());
 		this.createStatItem(
 			qualityStats,
 			'Vocabulary Richness',
 			(this.stats.content.vocabularyRichness * 100).toFixed(1) + '%',
 		);
-		this.createStatItem(
-			qualityStats,
-			'Avg Words/Sentence',
-			this.stats.content.avgWordsPerSentence.toString(),
-		);
+		this.createStatItem(qualityStats, 'Avg Words/Sentence', this.stats.content.avgWordsPerSentence.toString());
 	}
 
 	/**
@@ -303,16 +327,8 @@ export class StatsPanel extends ItemView {
 		const contentStats = contentSection.createDiv({ cls: 'stats-grid' });
 		this.createStatItem(contentStats, 'Paragraphs', this.stats.content.paragraphs.toString());
 		this.createStatItem(contentStats, 'Sentences', this.stats.content.sentences.toString());
-		this.createStatItem(
-			contentStats,
-			'Avg Words/Paragraph',
-			this.stats.content.avgWordsPerParagraph.toString(),
-		);
-		this.createStatItem(
-			contentStats,
-			'Avg Words/Sentence',
-			this.stats.content.avgWordsPerSentence.toString(),
-		);
+		this.createStatItem(contentStats, 'Avg Words/Paragraph', this.stats.content.avgWordsPerParagraph.toString());
+		this.createStatItem(contentStats, 'Avg Words/Sentence', this.stats.content.avgWordsPerSentence.toString());
 	}
 
 	/**
@@ -380,9 +396,7 @@ export class StatsPanel extends ItemView {
 				const goalCard = goalsSection.createDiv({ cls: 'stats-goal-card' });
 				goalCard.createEl('h6', { text: goal.name });
 
-				const progress = this.stats
-					? Math.min(100, (this.stats.wordCount.total / goal.targetWords) * 100)
-					: 0;
+				const progress = this.stats ? Math.min(100, (this.stats.wordCount.total / goal.targetWords) * 100) : 0;
 
 				const progressBar = goalCard.createDiv({ cls: 'stats-progress-bar' });
 				const progressFill = progressBar.createDiv({ cls: 'stats-progress-fill' });

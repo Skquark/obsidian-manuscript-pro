@@ -146,7 +146,7 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
 	}
 
 	// Quick actions
-	const actions = container.createDiv({ cls: 'citation-actions' });
+    const actions = container.createDiv({ cls: 'citation-actions' });
 
 	const copyKeyBtn = actions.createEl('button', {
 		text: '📋 Copy Key',
@@ -164,21 +164,68 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
 		text: '📝 Copy Citation',
 		cls: 'citation-action-button',
 	});
-	copyCitationBtn.addEventListener('click', () => {
-		// Copy plain text version (strip HTML)
-		const plainText = formatted.replace(/<[^>]*>/g, '');
-		navigator.clipboard.writeText(plainText);
-		copyCitationBtn.textContent = '✓ Copied!';
-		setTimeout(() => {
-			copyCitationBtn.textContent = '📝 Copy Citation';
-		}, 2000);
-	});
+    copyCitationBtn.addEventListener('click', () => {
+        // Copy plain text version (strip HTML)
+        const plainText = formatted.replace(/<[^>]*>/g, '');
+        navigator.clipboard.writeText(plainText);
+        copyCitationBtn.textContent = '✓ Copied!';
+        setTimeout(() => {
+            copyCitationBtn.textContent = '📝 Copy Citation';
+        }, 2000);
+    });
+
+    const copyBibBtn = actions.createEl('button', {
+        text: '📚 Copy BibTeX',
+        cls: 'citation-action-button',
+    });
+    copyBibBtn.addEventListener('click', () => {
+        try {
+            const bib = plugin.bibliographyManager.toBibTeX(entry);
+            navigator.clipboard.writeText(bib);
+            copyBibBtn.textContent = '✓ Copied!';
+            setTimeout(() => (copyBibBtn.textContent = '📚 Copy BibTeX'), 2000);
+        } catch (e) {
+            copyBibBtn.textContent = '✗ Error';
+            setTimeout(() => (copyBibBtn.textContent = '📚 Copy BibTeX'), 2000);
+        }
+    });
+
+    // Open DOI/URL action
+    const openBtn = actions.createEl('button', {
+        text: '🔗 Open DOI/URL',
+        cls: 'citation-action-button',
+    });
+    const targetUrl = doi ? `https://doi.org/${doi}` : (url || '');
+    if (!targetUrl) {
+        openBtn.setAttr('disabled', 'true');
+        openBtn.title = 'No DOI or URL available';
+    }
+    openBtn.addEventListener('click', async () => {
+        if (!targetUrl) return;
+        try {
+            // Prefer electron shell when available
+            const electron = require('electron');
+            const shell = electron?.shell || electron?.remote?.shell;
+            if (shell?.openExternal) {
+                await shell.openExternal(targetUrl);
+            } else {
+                window.open(targetUrl, '_blank', 'noopener');
+            }
+        } catch (e) {
+            try {
+                window.open(targetUrl, '_blank', 'noopener');
+            } catch (_) {
+                openBtn.textContent = '✗ Failed to open';
+                setTimeout(() => (openBtn.textContent = '🔗 Open DOI/URL'), 2000);
+            }
+        }
+    });
 
 	// Citation style indicator
 	const styleIndicator = container.createDiv({ cls: 'citation-style-indicator' });
 	styleIndicator.textContent = `Style: ${plugin.citationFormatter.getActiveStyle()}`;
 
-	return container;
+    return container;
 }
 
 /**

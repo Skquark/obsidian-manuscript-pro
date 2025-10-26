@@ -14,7 +14,8 @@ export class ConcealPostProcessor {
 
 		let match;
 		while ((match = this.regexp.exec(element.innerHTML)) !== null) {
-			for (let i = 1; i < match.length; i++) {
+			if (match.length > 1 && match.indices) {
+				for (let i = 1; i < match.length; i++) {
 				if (!match.indices) continue;
 
 				const replacement = `<span class="manuscript-pro-hide-match">${match[i]}</span>`;
@@ -23,10 +24,19 @@ export class ConcealPostProcessor {
 
 				resultString += element.innerHTML.substring(prevFinalPos, startPos).concat(replacement);
 				prevFinalPos = finalPos;
+				}
+			} else {
+				const startPos = match.index;
+				const finalPos = match.index + match[0].length;
+				const replacement = `<span class=\"manuscript-pro-hide-match\">${match[0]}</span>`;
+				resultString += element.innerHTML.substring(prevFinalPos, startPos).concat(replacement);
+				prevFinalPos = finalPos;
 			}
 		}
 
 		if (resultString.length > 0) {
+			// append remaining content after last processed segment
+			resultString += element.innerHTML.substring(prevFinalPos);
 			element.innerHTML = resultString;
 		}
 	};

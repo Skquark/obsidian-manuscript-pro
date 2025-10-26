@@ -6,7 +6,9 @@
 	"type": "commonjs",
 	"scripts": {
 		"dev": "rollup --config rollup.config.mjs -w --environment BUILD:dev",
-		"build": "rollup --config rollup.config.mjs --environment BUILD:prod"
+		"build": "rollup --config rollup.config.mjs --environment BUILD:prod && npm run copy-main",
+		"copy-main": "cp build/main.js main.js || copy build\\main.js main.js",
+		"deploy": "npm run build && deploy-to-vault.bat \"C:\\Projects\\god-is-water-book\""
 	},
 	"repository": {
 		"type": "git",

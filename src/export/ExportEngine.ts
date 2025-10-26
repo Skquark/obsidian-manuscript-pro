@@ -35,15 +35,12 @@ export class ExportEngine {
 
 	/**
 	 * Check if Pandoc is available
+	 * This is a silent check - errors are only shown when user tries to export
 	 */
 	async checkPandocAvailable(): Promise<boolean> {
 		try {
 			// Check if Node.js APIs are available
 			if (typeof execFile === 'undefined') {
-				new Notice(
-					'Export feature requires Node.js integration. This may not be available in your Obsidian environment.',
-				);
-				console.error('Node.js child_process API not available');
 				return false;
 			}
 
@@ -54,14 +51,12 @@ export class ExportEngine {
 			const versionMatch = stdout.match(/pandoc\s+([\d.]+)/);
 			if (versionMatch) {
 				this.pandocVersion = versionMatch[1];
-				console.log(`Pandoc version ${this.pandocVersion} detected`);
 				return true;
 			}
 
 			return false;
 		} catch (error) {
-			console.error('Pandoc not found:', error);
-			new Notice('Pandoc not found. Please install Pandoc from https://pandoc.org');
+			// Silently fail - user will get a notice when they actually try to export
 			return false;
 		}
 	}
@@ -199,10 +194,13 @@ export class ExportEngine {
 		// Output file
 		args.push('-o', outputPath);
 
-		// Format-specific options
-		if (profile.format !== 'markdown') {
-			args.push('-t', profile.format);
-		}
+    // Format-specific options
+    if (profile.format !== 'markdown') {
+      // For PDF, allow pandoc to choose appropriate route (commonly via LaTeX) and avoid '-t pdf' which can be brittle
+      if (profile.format !== 'pdf') {
+        args.push('-t', profile.format);
+      }
+    }
 
 		// Standalone document
 		if (options.standalone !== false) {

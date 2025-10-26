@@ -194,9 +194,24 @@ export class BibliographyManager {
 	/**
 	 * Get all citation entries
 	 */
-	getAllCitations(): Map<string, BibEntry> {
-		return this.entries;
-	}
+    getAllCitations(): Map<string, BibEntry> {
+        return this.entries;
+    }
+
+    /**
+     * Generate a BibTeX string for a single entry
+     */
+    toBibTeX(entry: BibEntry): string {
+        const fields = entry.fields instanceof Map ? entry.fields : new Map(Object.entries(entry.fields as any));
+        const lines: string[] = [];
+        lines.push(`@${entry.type}{${entry.key},`);
+        fields.forEach((value: string, key: string) => {
+            const escaped = (value ?? '').toString().replace(/[{}]/g, '\\$&');
+            lines.push(`  ${key} = {${escaped}},`);
+        });
+        lines.push('}');
+        return lines.join('\n');
+    }
 
 	/**
 	 * Check if citation key exists

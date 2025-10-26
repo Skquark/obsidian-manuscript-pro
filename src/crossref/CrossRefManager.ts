@@ -32,15 +32,30 @@ export class CrossRefManager {
 		this.labels.clear();
 		this.indexedFiles.clear();
 
-		const files = this.plugin.app.vault.getMarkdownFiles();
+		const allFiles = this.plugin.app.vault.getMarkdownFiles();
+		const maxFiles = this.plugin.settings.crossRef.maxFilesToIndex;
+
+		// Apply file limit if set (0 = unlimited)
+		const files = maxFiles > 0 ? allFiles.slice(0, maxFiles) : allFiles;
+
+		// Warn if we're hitting the limit
+		if (maxFiles > 0 && allFiles.length > maxFiles) {
+			console.warn(
+				`CrossRef: Vault has ${allFiles.length} files, indexing only first ${maxFiles}. Increase maxFilesToIndex in settings if needed.`,
+			);
+		}
+
 		for (const file of files) {
 			await this.indexFile(file);
 		}
 
 		this.lastIndexTime = Date.now();
 
-		if (this.plugin.settings.debugMode) {
-			console.log(`CrossRef: Indexed ${this.labels.size} labels from ${this.indexedFiles.size} files`);
+		if (this.plugin.settings.debugMode || this.plugin.settings.crossRef.showIndexStats) {
+			console.log(
+				`CrossRef: Indexed ${this.labels.size} labels from ${this.indexedFiles.size} files` +
+					(allFiles.length > files.length ? ` (${allFiles.length - files.length} files skipped due to limit)` : ''),
+			);
 		}
 	}
 
@@ -128,7 +143,11 @@ export class CrossRefManager {
 		const contextText = contextLines.join('\n').toLowerCase();
 
 		// Check for section headings
-		if (/^#{1,6}\s/.test(lines[lineIndex]) || contextText.includes('\\section') || contextText.includes('\\subsection')) {
+		if (
+			/^#{1,6}\s/.test(lines[lineIndex]) ||
+			contextText.includes('\\section') ||
+			contextText.includes('\\subsection')
+		) {
 			return contextText.includes('\\subsection') ? 'subsection' : 'section';
 		}
 
@@ -336,13 +355,13 @@ export class CrossRefManager {
 	}
 
 	/**
-	 * Validate references
+	 * Validate references (async: reads files to find undefined refs)
 	 */
-	validateReferences(filePath?: string): ValidationIssue[] {
+	async validateReferences(filePath?: string): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
 		// Find undefined references
-		const undefinedRefs = this.findUndefinedRefs(filePath);
+		const undefinedRefs = await this.findUndefinedRefs(filePath);
 		undefinedRefs.forEach(({ file, ref, position, context }) => {
 			// Find similar labels for suggestions
 			const similar = this.findSimilarLabels(ref, 3);
@@ -389,32 +408,33 @@ export class CrossRefManager {
 	/**
 	 * Find undefined references
 	 */
-	private findUndefinedRefs(filePath?: string): Array<{ file: string; ref: string; position: Position; context: string }> {
-		const undefined: Array<{ file: string; ref: string; position: Position; context: string }> = [];
+	private async findUndefinedRefs(
+		filePath?: string,
+	): Promise<Array<{ file: string; ref: string; position: Position; context: string }>> {
+		const undefinedRefs: Array<{ file: string; ref: string; position: Position; context: string }> = [];
 		const files = filePath ? [filePath] : Array.from(this.indexedFiles);
 
 		for (const file of files) {
 			const tfile = this.plugin.app.vault.getAbstractFileByPath(file);
 			if (!(tfile instanceof TFile)) continue;
 
-			this.plugin.app.vault.read(tfile).then((content) => {
-				const refs = this.extractReferences(content, file);
-				refs.forEach((locations, key) => {
-					if (!this.labels.has(key)) {
-						locations.forEach((loc) => {
-							undefined.push({
-								file: loc.file,
-								ref: key,
-								position: loc.position,
-								context: loc.context,
-							});
+			const content = await this.plugin.app.vault.read(tfile);
+			const refs = this.extractReferences(content, file);
+			refs.forEach((locations, key) => {
+				if (!this.labels.has(key)) {
+					locations.forEach((loc) => {
+						undefinedRefs.push({
+							file: loc.file,
+							ref: key,
+							position: loc.position,
+							context: loc.context,
 						});
-					}
-				});
+					});
+				}
 			});
 		}
 
-		return undefined;
+		return undefinedRefs;
 	}
 
 	/**
@@ -591,5 +611,49 @@ export class CrossRefManager {
 			totalReferences,
 			filesIndexed: this.indexedFiles.size,
 		};
+	}
+
+	/**
+	 * Rename a label key and update all references across the vault
+	 * Returns number of files updated
+	 */
+	async renameLabelAndUpdateRefs(oldKey: string, newKey: string): Promise<number> {
+		const fmt = this.validateLabelFormat(newKey);
+		if (!fmt.valid) throw new Error(fmt.message || 'Invalid label key');
+
+		// Update in-memory index first so suggestions reflect the change
+		const existing = this.labels.get(oldKey);
+		if (existing) {
+			this.labels.delete(oldKey);
+			existing.key = newKey;
+			this.labels.set(newKey, existing);
+		}
+
+		const files = this.plugin.app.vault.getMarkdownFiles();
+		const refPatterns = [
+			new RegExp(String.raw`\\label\{${oldKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\}`, 'g'),
+			new RegExp(
+				String.raw`\\(ref|eqref|cref|pageref|autoref)\{${oldKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\}`,
+				'g',
+			),
+		];
+
+		let changed = 0;
+		for (const file of files) {
+			const content = await this.plugin.app.vault.read(file);
+			let updated = content;
+			// Replace label definition
+			updated = updated.replace(refPatterns[0], (m) => m.replace(oldKey, newKey));
+			// Replace reference usages
+			updated = updated.replace(refPatterns[1], (m) => m.replace(oldKey, newKey));
+			if (updated !== content) {
+				await this.plugin.app.vault.modify(file, updated);
+				changed++;
+			}
+		}
+
+		// Re-index vault to reflect changes
+		await this.indexVault();
+		return changed;
 	}
 }

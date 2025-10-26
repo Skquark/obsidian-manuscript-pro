@@ -6,5 +6,5 @@
 	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export. Based on Dynamic Text Concealer by Matt Cole Anderson.",
 	"author": "Fork of Matt Cole Anderson's Dynamic Text Concealer",
 	"authorUrl": "https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
 }

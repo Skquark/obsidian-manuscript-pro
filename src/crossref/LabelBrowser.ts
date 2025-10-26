@@ -58,7 +58,9 @@ export class LabelBrowser extends ItemView {
 		const header = contentEl.createDiv({ cls: 'label-browser-header' });
 		header.createEl('h4', { text: 'Cross-References', cls: 'label-browser-title' });
 
-		const refreshBtn = header.createEl('button', {
+		const buttonContainer = header.createDiv({ cls: 'label-browser-buttons' });
+
+		const refreshBtn = buttonContainer.createEl('button', {
 			text: '↻',
 			cls: 'label-browser-refresh',
 		});
@@ -66,6 +68,15 @@ export class LabelBrowser extends ItemView {
 		refreshBtn.onclick = async () => {
 			await this.plugin.crossRefManager.indexVault();
 			await this.refresh();
+		};
+
+		const closeBtn = buttonContainer.createEl('button', {
+			text: '✕',
+			cls: 'label-browser-close',
+		});
+		closeBtn.title = 'Close';
+		closeBtn.onclick = () => {
+			this.app.workspace.detachLeavesOfType(LABEL_BROWSER_VIEW_TYPE);
 		};
 
 		// Search box
@@ -261,8 +272,8 @@ export class LabelBrowser extends ItemView {
 	/**
 	 * Show context menu for label
 	 */
-	private showLabelContextMenu(label: LabelEntry, event: MouseEvent): void {
-		const menu = new Menu();
+  private showLabelContextMenu(label: LabelEntry, event: MouseEvent): void {
+    const menu = new Menu();
 
 		menu.addItem((item) => {
 			item
@@ -289,19 +300,42 @@ export class LabelBrowser extends ItemView {
 				});
 		});
 
-		if (label.references.length > 0) {
-			menu.addSeparator();
-			menu.addItem((item) => {
-				item
-					.setTitle(`Show ${label.references.length} References`)
-					.setIcon('links-coming-in')
-					.onClick(() => {
-						// Would show a list of all references
-						console.log('References:', label.references);
-					});
-			});
-		}
+    if (label.references.length > 0) {
+      menu.addSeparator();
+      menu.addItem((item) => {
+        item
+          .setTitle(`Show ${label.references.length} References`)
+          .setIcon('links-coming-in')
+          .onClick(() => {
+            // Would show a list of all references
+            console.log('References:', label.references);
+          });
+      });
+    }
 
-		menu.showAtMouseEvent(event);
-	}
+    menu.addSeparator();
+    menu.addItem((item) => {
+      item
+        .setTitle('Rename Label and Update Refs')
+        .setIcon('pencil')
+        .onClick(async () => {
+          const newKey = prompt('Enter new label key:', label.key) || '';
+          if (!newKey || newKey === label.key) return;
+          const fmt = this.plugin.crossRefManager.validateLabelFormat(newKey);
+          if (!fmt.valid) {
+            alert(`Invalid label: ${fmt.message}`);
+            return;
+          }
+          try {
+            const changed = await this.plugin.crossRefManager.renameLabelAndUpdateRefs(label.key, newKey);
+            new Notice(`Renamed to ${newKey}. Updated ${changed} file(s).`);
+            await this.refresh();
+          } catch (e: any) {
+            new Notice(`Rename failed: ${e.message || e}`);
+          }
+        });
+    });
+
+    menu.showAtMouseEvent(event);
+  }
 }

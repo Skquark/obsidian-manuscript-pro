@@ -42,6 +42,7 @@ export interface PluginSettings {
 
 	// UI
 	showStatusBar: boolean;
+	showRibbonIcon: boolean;
 	showConcealedCount: boolean;
 
 	// Focus Mode
@@ -146,6 +147,7 @@ export interface PluginSettings {
 		enabled: boolean;
 		pandocPath?: string;
 		defaultOutputDir?: string;
+		defaultCslPath?: string;
 		openAfterExport: boolean;
 
 		profiles: any[]; // ExportProfile[] - avoid circular dependency

@@ -6,7 +6,7 @@ import { PatternGroup, Pattern } from '../interfaces/plugin-settings';
  */
 
 export function createCitationsGroup(): PatternGroup {
-	const patterns: Pattern[] = [
+    const patterns: Pattern[] = [
 		{
 			regexString: String.raw`\[@`,
 			regex: /\[@/g,
@@ -25,12 +25,19 @@ export function createCitationsGroup(): PatternGroup {
 			replacement: '; ',
 			description: 'Hide @ in multi-citations'
 		},
-		{
-			regexString: String.raw`@\{([^\}]+)\}`,
-			regex: /@\{([^\}]+)\}/g,
-			replacement: '$1',
-			description: 'Unwrap braced citations @{url}'
-		},
+        // Hide only the delimiters of @{...}, leave inner content visible
+        {
+            regexString: String.raw`@\{(?=[^\}]+\})`,
+            regex: /@\{(?=[^\}]+\})/g,
+            replacement: '',
+            description: 'Hide opening delimiter of braced citations (@{)'
+        },
+        {
+            regexString: String.raw`(?<=@\{[^\}]+)\}`,
+            regex: /(?<=@\{[^\}]+)\}/g,
+            replacement: '',
+            description: 'Hide closing delimiter of braced citations (})'
+        },
 		{
 			regexString: String.raw`(?<!\[)@(?=[\w])`,
 			regex: /(?<!\[)@(?=[\w])/g,

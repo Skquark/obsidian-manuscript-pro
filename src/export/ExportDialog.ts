@@ -8,10 +8,11 @@ import type LatexPandocConcealerPlugin from '../main';
 import type { ExportProfile, ExportFormat } from './ExportInterfaces';
 
 export class ExportDialog extends Modal {
-	private selectedProfile: ExportProfile;
-	private selectedFiles: TFile[];
-	private outputPath: string = '';
-	private onExport: (profile: ExportProfile, files: TFile[], outputPath?: string) => Promise<void>;
+    private selectedProfile: ExportProfile;
+    private selectedFiles: TFile[];
+    private outputPath: string = '';
+    private cslOverride: string = '';
+    private onExport: (profile: ExportProfile, files: TFile[], outputPath?: string) => Promise<void>;
 
 	constructor(
 		app: App,
@@ -57,6 +58,30 @@ export class ExportDialog extends Modal {
 					if (profile) {
 						this.selectedProfile = profile;
 						this.updateProfileInfo();
+						// Also update inline CSL indicator if present
+						try {
+							const effEl = this.contentEl.querySelector('.export-csl-effective') as HTMLElement | null;
+							if (effEl) {
+								// Recompute by triggering a noop change in helper
+								// The indicator relies on local state; we can re-render by simple textContent reset
+								// and calling the same computation as renderProfileDetails
+								const eff = (this.cslOverride && this.cslOverride.trim()) || this.selectedProfile.pandocOptions.csl || this.plugin.settings.export?.defaultCslPath || '';
+								effEl.empty();
+                            const label = effEl.createEl('span', { text: 'Effective CSL: ', cls: 'setting-item-description' });
+                            const val = effEl.createEl('span', { text: eff || 'None', cls: 'setting-item-description' });
+                            val.style.fontWeight = '600';
+                            try {
+                                const fs = require('fs');
+                                const exists = eff ? fs.existsSync(eff) : undefined;
+                                if (exists !== undefined) {
+                                    const dot = effEl.createEl('span', { text: exists ? '  ✓' : '  ✗' });
+                                    dot.style.marginLeft = '6px';
+                                    dot.style.color = exists ? 'var(--text-success)' : 'var(--text-error)';
+                                    dot.title = exists ? 'CSL file found' : 'CSL file not found';
+                                }
+                            } catch (_) {}
+							}
+						} catch (_) {}
 					}
 				});
 			});
@@ -83,8 +108,68 @@ export class ExportDialog extends Modal {
 				});
 			});
 
-		// Export options
-		contentEl.createEl('h3', { text: 'Options' });
+        // CSL style (optional)
+        // Leave override blank by default; details section will show effective value (override > profile > global)
+        const cslSetting = new Setting(contentEl)
+            .setName('CSL Style (optional)')
+            .setDesc('Override citation style for this export (.csl path). Leave empty to use profile/global default');
+        let cslTextRef: any;
+        // Inline effective status indicator
+        const effectiveCslEl = contentEl.createDiv({ cls: 'export-csl-effective' });
+        const updateCslInlineIndicator = () => {
+            const eff = (this.cslOverride && this.cslOverride.trim()) || this.selectedProfile.pandocOptions.csl || this.plugin.settings.export?.defaultCslPath || '';
+            // Basic exists check if running in desktop (may be undefined in mobile)
+            let exists: boolean | undefined = undefined;
+            try {
+                const fs = require('fs');
+                exists = eff ? fs.existsSync(eff) : undefined;
+            } catch (_) {
+                exists = undefined;
+            }
+            effectiveCslEl.empty();
+            const label = effectiveCslEl.createEl('span', { text: 'Effective CSL: ', cls: 'setting-item-description' });
+            const val = effectiveCslEl.createEl('span', { text: eff || 'None', cls: 'setting-item-description' });
+            val.style.fontWeight = '600';
+            if (exists !== undefined) {
+                const dot = effectiveCslEl.createEl('span', { text: exists ? '  ✓' : '  ✗' });
+                dot.style.marginLeft = '6px';
+                dot.style.color = exists ? 'var(--text-success)' : 'var(--text-error)';
+                dot.title = exists ? 'CSL file found' : 'CSL file not found';
+            }
+        };
+        cslSetting.addText((text) => {
+            cslTextRef = text;
+            text.setPlaceholder('/path/to/style.csl');
+            text.setValue(this.cslOverride);
+            text.onChange((value) => {
+                this.cslOverride = value;
+                this.updateProfileInfo();
+                updateCslInlineIndicator();
+            });
+        });
+        cslSetting.addExtraButton((btn) => {
+            btn.setIcon('folder').setTooltip('Browse...').onClick(async () => {
+                try {
+                    const electron = require('electron');
+                    const dialog = electron?.dialog || electron?.remote?.dialog;
+                    if (!dialog) throw new Error('Dialog not available');
+                    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'CSL', extensions: ['csl'] }] });
+                    if (!res.canceled && res.filePaths && res.filePaths[0]) {
+                        this.cslOverride = res.filePaths[0];
+                        if (cslTextRef) cslTextRef.setValue(this.cslOverride);
+                        this.updateProfileInfo();
+                        updateCslInlineIndicator();
+                    }
+                } catch (e) {
+                    new Notice('File picker not available. Enter path manually.');
+                }
+            });
+        });
+        // Initial indicator
+        updateCslInlineIndicator();
+
+        // Export options
+        contentEl.createEl('h3', { text: 'Options' });
 
 		new Setting(contentEl)
 			.setName('Open After Export')
@@ -141,10 +226,12 @@ export class ExportDialog extends Modal {
 			this.addDetail(details, 'PDF Engine', this.selectedProfile.pandocOptions.pdfEngine);
 		}
 
-		// Citations
-		if (this.selectedProfile.pandocOptions.citeproc) {
-			this.addDetail(details, 'Process Citations', 'Yes');
-		}
+        // Citations
+        if (this.selectedProfile.pandocOptions.citeproc) {
+            this.addDetail(details, 'Process Citations', 'Yes');
+        }
+        const effCsl = this.cslOverride || this.selectedProfile.pandocOptions.csl || this.plugin.settings.export?.defaultCslPath;
+        this.addDetail(details, 'Effective CSL', effCsl ? effCsl : 'None');
 	}
 
 	private addDetail(container: HTMLElement, label: string, value: string): void {
@@ -173,15 +260,22 @@ export class ExportDialog extends Modal {
 		}
 	}
 
-	private async handleExport(): Promise<void> {
-		try {
-			await this.onExport(this.selectedProfile, this.selectedFiles, this.outputPath || undefined);
-			this.close();
-		} catch (error) {
-			console.error('Export failed:', error);
-			new Notice(`Export failed: ${error.message}`);
-		}
-	}
+    private async handleExport(): Promise<void> {
+        try {
+            let profileToUse: ExportProfile = this.selectedProfile;
+            if (this.cslOverride && this.cslOverride.trim().length > 0) {
+                profileToUse = {
+                    ...this.selectedProfile,
+                    pandocOptions: { ...this.selectedProfile.pandocOptions, csl: this.cslOverride.trim() },
+                };
+            }
+            await this.onExport(profileToUse, this.selectedFiles, this.outputPath || undefined);
+            this.close();
+        } catch (error) {
+            console.error('Export failed:', error);
+            new Notice(`Export failed: ${error.message}`);
+        }
+    }
 
 	onClose() {
 		const { contentEl } = this;

@@ -257,13 +257,13 @@ export class ValidationEngine {
 	private async validateUndefinedReferences(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-		if (!this.plugin.crossRefManager) {
-			return issues;
-		}
+    if (!this.plugin.crossRefManager) {
+      return issues;
+    }
 
-		const validationResults = this.plugin.crossRefManager.validateReferences();
+    const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-		for (const result of validationResults) {
+    for (const result of validationResults) {
 			if (result.type === 'undefined-ref' && result.severity === 'error') {
 				issues.push({
 					id: `undefined-ref-${result.location.file}-${result.location.line}`,
@@ -293,13 +293,13 @@ export class ValidationEngine {
 	private async validateDuplicateLabels(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-		if (!this.plugin.crossRefManager) {
-			return issues;
-		}
+    if (!this.plugin.crossRefManager) {
+      return issues;
+    }
 
-		const validationResults = this.plugin.crossRefManager.validateReferences();
+    const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-		for (const result of validationResults) {
+    for (const result of validationResults) {
 			if (result.type === 'duplicate-label') {
 				issues.push({
 					id: `duplicate-label-${result.location.file}-${result.location.line}`,
@@ -326,13 +326,13 @@ export class ValidationEngine {
 	private async validateOrphanedLabels(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-		if (!this.plugin.crossRefManager) {
-			return issues;
-		}
+    if (!this.plugin.crossRefManager) {
+      return issues;
+    }
 
-		const validationResults = this.plugin.crossRefManager.validateReferences();
+    const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-		for (const result of validationResults) {
+    for (const result of validationResults) {
 			if (result.type === 'orphaned-label') {
 				issues.push({
 					id: `orphaned-label-${result.location.file}-${result.location.line}`,

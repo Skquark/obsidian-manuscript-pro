@@ -42,7 +42,6 @@ class ConcealViewPlugin implements PluginValue {
 	replacement: string;
 	cursorLineFrom: number = -1;
 	cursorLineTo: number = -1;
-	lastCursorPos: number = -1;
 
 	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings, replacement: string = '') {
 		this.settings = settings;
@@ -62,21 +61,7 @@ class ConcealViewPlugin implements PluginValue {
 
 				// Add mark decorator for each capture group in regex
 				for (let i = 1; i < match.length; i++) {
-					// Fallback for older Electron builds without 'd' flag support
-					if (!match.indices) {
-						// Use manual calculation based on match groups
-						// This is less accurate but works without indices
-						let offset = 0;
-						for (let j = 0; j < i; j++) {
-							const groupStr = match[j] || '';
-							offset += groupStr.length;
-						}
-						const captureStr = match[i] || '';
-						const startPos = from + offset;
-						const finalPos = startPos + captureStr.length;
-						add(startPos, finalPos, Decoration.mark({ class: 'manuscript-pro-hide-match' }));
-						continue;
-					}
+					if (!match.indices) continue;
 
 					const startPos = from + (match.indices[i][0] - match.index);
 					const finalPos = from + (match.indices[i][1] - match.index);
@@ -85,18 +70,24 @@ class ConcealViewPlugin implements PluginValue {
 
 				// If no capture groups, hide the entire match
 				if (match.length === 1) {
-					// Add replacement text widget FIRST if specified
-					// Widget must be added before mark decoration for proper ordering
+					PLACEHOLDER_MARK
+
+					// Add replacement text widget if specified
 					if (this.replacement) {
 						const widget = Decoration.widget({
 							widget: new ReplacementWidget(this.replacement),
-							side: -1,
+							side: 1,
 						});
 						add(from, from, widget);
 					}
-
-					// Then add the hiding mark decoration
-					add(from, to, Decoration.mark({ class: 'manuscript-pro-hide-match' }));
+					
+					add(from, to, Decoration.mark({ class: 'manuscript-pro-hide-match' }));DELETEME
+						const widget = Decoration.widget({
+							widget: new ReplacementWidget(this.replacement),
+							side: 1,
+						});
+						add(from, from, widget);
+					}
 				}
 			},
 		});
@@ -147,48 +138,20 @@ class ConcealViewPlugin implements PluginValue {
 
 	/**
 	 * isCodeblock returns true if the current match overlaps with a code block
-	 * Exception: Pandoc raw LaTeX blocks (```{=latex}) are allowed to be concealed
 	 */
 	private isCodeblock(view: EditorView, from: number, to: number): boolean {
-		// Check if we're inside a Pandoc raw LaTeX block
-		// These blocks start with ```{=latex} and should be concealed
-		const doc = view.state.doc;
-		const lineStart = doc.lineAt(from);
-
-		// Scan backwards to find the start of the code block
-		for (let lineNum = lineStart.number; lineNum > 0; lineNum--) {
-			const line = doc.line(lineNum);
-			const text = line.text.trim();
-
-			// Found opening fence
-			if (text.startsWith('```')) {
-				// If it's a Pandoc raw LaTeX block, allow concealment
-				if (text === '```{=latex}') {
-					return false; // Not a regular code block, allow concealment
-				}
-				// Otherwise it's a regular code block, prevent concealment
-				return true;
-			}
-
-			// Stop if we hit a blank line (not in a code block)
-			if (text === '') {
-				break;
-			}
-		}
-
-		// Also check syntax tree for inline code
-		let isInlineCode = false;
+		let isCodeblock = false;
 		syntaxTree(view.state).iterate({
 			from,
 			to,
 			enter: (node) => {
-				if (/^inline-code/.test(node.name)) {
-					isInlineCode = true;
+				if (/^inline-code/.test(node.name) || node.name == 'HyperMD-codeblock_HyperMD-codeblock-bg') {
+					isCodeblock = true;
 					return false;
 				}
 			},
 		});
-		return isInlineCode;
+		return isCodeblock;
 	}
 
 	/**
@@ -216,19 +179,15 @@ class ConcealViewPlugin implements PluginValue {
 			return;
 		}
 
-		// Track cursor position changes for revealing
+		// Track cursor line changes for revealing
 		const selection = update.state.selection.main;
-		const cursorPos = selection.head;
-		const cursorLine = update.state.doc.lineAt(cursorPos);
+		const cursorLine = update.state.doc.lineAt(selection.head);
 		const cursorLineChanged = cursorLine.from !== this.cursorLineFrom || cursorLine.to !== this.cursorLineTo;
 
-		// Re-decorate when cursor line changes OR when selection changes (click events)
-		// This allows multi-line blocks to re-conceal when clicking away
-		if (this.settings.cursorReveal.enabled && (cursorLineChanged || update.selectionSet)) {
+		if (cursorLineChanged && this.settings.cursorReveal.enabled) {
 			this.cursorLineFrom = cursorLine.from;
 			this.cursorLineTo = cursorLine.to;
-			this.lastCursorPos = cursorPos;
-			// Force redecorating when cursor moves
+			// Force redecorating when cursor moves to a new line
 			this.decorations = this.matchDecorator.createDeco(update.view);
 			return;
 		}

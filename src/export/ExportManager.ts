@@ -6,13 +6,8 @@
 import { Notice, TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import { ExportEngine } from './ExportEngine';
-import type {
-	ExportProfile,
-	ExportResult,
-	TemplateInfo,
-	ManuscriptMetadata,
-	DEFAULT_EXPORT_PROFILES,
-} from './ExportInterfaces';
+import type { ExportProfile, ExportResult, TemplateInfo, ManuscriptMetadata } from './ExportInterfaces';
+import { DEFAULT_EXPORT_PROFILES } from './ExportInterfaces';
 
 export class ExportManager {
 	private exportEngine: ExportEngine;
@@ -25,17 +20,31 @@ export class ExportManager {
 	}
 
 	/**
+	 * Check Pandoc availability and cache version
+	 */
+	async checkPandoc(): Promise<boolean> {
+		return await this.exportEngine.checkPandocAvailable();
+	}
+
+	/**
+	 * Get cached Pandoc version (after checkPandoc)
+	 */
+	getPandocVersion(): string | null {
+		return this.exportEngine.getPandocVersion();
+	}
+
+	/**
 	 * Initialize export manager
 	 */
 	async initialize(): Promise<void> {
-		// Check Pandoc availability
+		// Check Pandoc availability silently
+		// Errors will be shown when user actually tries to export
 		const pandocAvailable = await this.exportEngine.checkPandocAvailable();
-		if (!pandocAvailable) {
-			console.warn('Pandoc not detected. Export functionality will be limited.');
-			new Notice('Pandoc not found. Please install Pandoc to enable export features.');
-		} else {
+		if (pandocAvailable) {
 			const version = this.exportEngine.getPandocVersion();
-			console.log(`Export Manager initialized with Pandoc ${version}`);
+			if (this.plugin.settings.debugMode) {
+				console.log(`Export Manager initialized with Pandoc ${version}`);
+			}
 		}
 
 		// Load templates
@@ -49,7 +58,6 @@ export class ExportManager {
 		this.profiles.clear();
 
 		// Load built-in profiles
-		const { DEFAULT_EXPORT_PROFILES } = require('./ExportInterfaces');
 		for (const profile of DEFAULT_EXPORT_PROFILES) {
 			this.profiles.set(profile.id, profile);
 		}
@@ -163,6 +171,16 @@ export class ExportManager {
 	 * Export multiple files
 	 */
 	async exportFiles(files: TFile[], profileId?: string, outputPath?: string): Promise<ExportResult> {
+		// Check if Pandoc is available before attempting export
+		const pandocAvailable = await this.exportEngine.checkPandocAvailable();
+		if (!pandocAvailable) {
+			new Notice('Pandoc not found. Please install Pandoc from https://pandoc.org to use export features.');
+			return {
+				success: false,
+				error: 'Pandoc not found. Please install Pandoc from https://pandoc.org',
+			};
+		}
+
 		// Get profile
 		const profile = profileId ? this.getProfile(profileId) : this.getDefaultProfile();
 		if (!profile) {
@@ -182,8 +200,15 @@ export class ExportManager {
 		// Extract metadata
 		const metadata = await this.exportEngine.extractMetadata(files);
 
-		// Perform export
-		const result = await this.exportEngine.exportManuscript(profile, inputPaths, outputPath, metadata);
+        // Inject global CSL if not set in profile
+        const effectiveProfile = { ...profile, pandocOptions: { ...profile.pandocOptions } };
+        const defaultCsl = this.plugin.settings.export?.defaultCslPath;
+        if (defaultCsl && !effectiveProfile.pandocOptions.csl) {
+            effectiveProfile.pandocOptions.csl = defaultCsl;
+        }
+
+        // Perform export
+        const result = await this.exportEngine.exportManuscript(effectiveProfile, inputPaths, outputPath, metadata);
 
 		// Show result
 		if (result.success) {
