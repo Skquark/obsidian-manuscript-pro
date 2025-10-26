@@ -33,9 +33,9 @@ export class OutlineView extends ItemView {
     });
     if (scenes.length === 0) { container.createEl('p', { text: 'No scenes detected.' }); return; }
     const ul = container.createEl('ul');
-    scenes.forEach((sc) => {
+    scenes.forEach((sc, idx) => {
       const li = ul.createEl('li');
-      const a = li.createEl('a', { text: sc.title });
+      const a = li.createEl('a', { text: `${idx+1}. ${sc.title}` });
       a.onclick = () => {
         const v = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!v) return;
@@ -45,4 +45,3 @@ export class OutlineView extends ItemView {
     });
   }
 }
-

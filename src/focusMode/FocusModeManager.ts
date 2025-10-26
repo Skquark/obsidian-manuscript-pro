@@ -1,4 +1,4 @@
-import { App, WorkspaceLeaf } from 'obsidian';
+import { App, WorkspaceLeaf, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 import { PluginSettings } from '../interfaces/plugin-settings';
 import LatexPandocConcealerPlugin from '../main';
@@ -100,11 +100,11 @@ export class FocusModeManager {
 		}
 
 		// Force editor refresh to re-render visible content
-		const activeView = this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView);
-		if (activeView?.editor) {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (activeView) {
 			// Trigger a refresh by dispatching a state effect
 			const editor = activeView.editor as any;
-			if (editor.cm) {
+			if (editor?.cm) {
 				editor.cm.dispatch({});
 			}
 		}

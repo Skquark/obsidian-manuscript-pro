@@ -98,6 +98,8 @@ export interface PluginSettings {
 		showLabelBrowser: boolean;
 		validateOnSave: boolean;
 		indexOnStartup: boolean;
+		maxFilesToIndex: number; // Limit for very large vaults (0 = unlimited)
+		showIndexStats: boolean; // Show index statistics in console/notices
 	};
 
 	// Manuscript Navigator
@@ -147,8 +149,10 @@ export interface PluginSettings {
 		enabled: boolean;
 		pandocPath?: string;
 		defaultOutputDir?: string;
-		defaultCslPath?: string;
 		openAfterExport: boolean;
+
+		// Global defaults
+		defaultCslPath?: string;
 
 		profiles: any[]; // ExportProfile[] - avoid circular dependency
 		defaultProfileId?: string;

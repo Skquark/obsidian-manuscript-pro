@@ -25,4 +25,16 @@ This live TODO tracks polish, fixes, and release tasks for Manuscript Pro. For d
 ## References
 
 - Phase 2 authoring plan: CODEX-ENHANCEMENTS-2.md
-- README, CLAUDE.md, CHANGELOG.md
+ - README, CLAUDE.md, CHANGELOG.md
+
+## Additional Recently Completed
+
+- Export UX: Export Dialog shows live “Effective CSL” with ✓/✗ existence check and parses CSL title; updates instantly on text edit and profile change.
+- Settings: Global Default CSL path added (Export & Publishing) and used automatically when profiles don’t specify CSL.
+- Export Manager: Injects global default CSL into effective profile.
+- Quality gating: Renamed phase4→quality across initialization and commands; commands now respect `settings.quality.*`.
+- Focus Mode: status bar refresh on toggle to keep indicator in sync.
+
+## Additional P0 Checks
+
+- [ ] Verify Reading Mode conceal post‑processor for interleaved matches and no truncation (indices and fallback).

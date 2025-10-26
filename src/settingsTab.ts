@@ -1126,7 +1126,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc('Check for undefined references, duplicate labels, and orphaned labels')
 			.addButton((button) => {
 				button.setButtonText('Validate').onClick(async () => {
-					const issues = this.plugin.crossRefManager.validateReferences();
+					const issues = await this.plugin.crossRefManager.validateReferences();
 					if (issues.length === 0) {
 						alert('✓ All references are valid!\n\nNo issues found.');
 					} else {

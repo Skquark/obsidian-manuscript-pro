@@ -214,3 +214,8 @@ Safety & Perf
 - Week 2: Phase B completion + quick wraps; start table wizard
 - Week 3: Phase C expansions; polish; docs + gifs
 - Week 4: Phase D frontmatter editor and final QA
+
+## Recent Additions (sync)
+
+- Export Dialog: live Effective CSL indicator (with existence check and CSL title parsing) and instant refresh on edit/profile change.
+- Settings: Global Default CSL path under Export & Publishing; Export Manager injects default CSL when profiles omit it.

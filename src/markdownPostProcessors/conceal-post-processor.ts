@@ -1,54 +1,58 @@
 import { MarkdownPostProcessor } from 'obsidian';
 
 export class ConcealPostProcessor {
-	private readonly ELEMENTS_TO_PROCESS = 'p, li';
-	private readonly REGEX_CURLY_REPLACEMENT = '$<answer>'; // first capture group; content is not concealed
+  private readonly ELEMENTS_TO_PROCESS = 'p, li';
 
-	constructor(public regexp: RegExp) {}
+  constructor(public regexp: RegExp, private replacement: string = '') {}
 
-	private conceal = (element: HTMLParagraphElement | HTMLLIElement) => {
-		// InnterHTML is the only way to preserve element tags during the regex matches.
-		// However, since the replaced text is a capture group, only text in the document itself can cause a replacement
-		let resultString = '';
-		let prevFinalPos = 0;
+  private conceal = (element: HTMLParagraphElement | HTMLLIElement) => {
+    // Build a new innerHTML by walking matches and hiding them, inserting optional visible replacements
+    const html = element.innerHTML;
+    let result = '';
+    let prev = 0;
 
-		let match;
-		while ((match = this.regexp.exec(element.innerHTML)) !== null) {
-			if (match.length > 1 && match.indices) {
-				for (let i = 1; i < match.length; i++) {
-				if (!match.indices) continue;
+    let match: RegExpExecArray | null;
+    while ((match = this.regexp.exec(html)) !== null) {
+      // If we have capture group indices (RegExp /d flag supported), hide only the groups
+      const anyMatch = match as any;
+      if (anyMatch.indices && match.length > 1) {
+        const indices = anyMatch.indices as Array<[number, number]>;
+        const groups: Array<{ i: number; start: number; end: number }> = [];
+        for (let i = 1; i < match.length; i++) {
+          const idx = indices[i];
+          if (!idx || idx[0] == null || idx[0] < 0) continue; // skip unmatched
+          groups.push({ i, start: idx[0], end: idx[1] });
+        }
+        groups.sort((a, b) => a.start - b.start);
+        for (const g of groups) {
+          result += html.substring(prev, g.start);
+          const hidden = `<span class="manuscript-pro-hide-match">${match[g.i] ?? ''}</span>`;
+          result += hidden;
+          prev = g.end;
+        }
+      } else {
+        // Hide entire match; insert replacement text if provided
+        const start = match.index;
+        const end = match.index + match[0].length;
+        result += html.substring(prev, start);
+        if (this.replacement) result += this.replacement;
+        const hidden = `<span class="manuscript-pro-hide-match">${match[0]}</span>`;
+        result += hidden;
+        prev = end;
+      }
+    }
 
-				const replacement = `<span class="manuscript-pro-hide-match">${match[i]}</span>`;
-				const startPos = match.indices[i][0];
-				const finalPos = match.indices[i][1];
+    if (result) {
+      // Append remainder after last processed segment
+      result += html.substring(prev);
+      element.innerHTML = result;
+    }
+  };
 
-				resultString += element.innerHTML.substring(prevFinalPos, startPos).concat(replacement);
-				prevFinalPos = finalPos;
-				}
-			} else {
-				const startPos = match.index;
-				const finalPos = match.index + match[0].length;
-				const replacement = `<span class=\"manuscript-pro-hide-match\">${match[0]}</span>`;
-				resultString += element.innerHTML.substring(prevFinalPos, startPos).concat(replacement);
-				prevFinalPos = finalPos;
-			}
-		}
-
-		if (resultString.length > 0) {
-			// append remaining content after last processed segment
-			resultString += element.innerHTML.substring(prevFinalPos);
-			element.innerHTML = resultString;
-		}
-	};
-
-	// markdownPostProcessor manipulates the DOM of
-	// read mode to conceal clozure syntax
-	process: MarkdownPostProcessor = (htmlElement: HTMLElement): void => {
-		const elements = htmlElement.querySelectorAll(this.ELEMENTS_TO_PROCESS);
-
-		// Loop through each element
-		elements.forEach((element: HTMLParagraphElement | HTMLLIElement) => {
-			this.conceal(element);
-		});
-	};
+  // markdownPostProcessor manipulates the DOM of Reading Mode to conceal syntax
+  process: MarkdownPostProcessor = (htmlElement: HTMLElement): void => {
+    const elements = htmlElement.querySelectorAll(this.ELEMENTS_TO_PROCESS);
+    elements.forEach((el: HTMLParagraphElement | HTMLLIElement) => this.conceal(el));
+  };
 }
+

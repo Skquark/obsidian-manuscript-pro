@@ -1458,6 +1458,129 @@ A: The plugin handles thousands of entries efficiently. Use duplicate detection 
 
 ---
 
+## 🔧 Troubleshooting
+
+### Export Issues
+
+**"Pandoc not found" error**
+- **Cause**: Pandoc is not installed or not in system PATH
+- **Solution**: 
+  1. Download and install Pandoc from https://pandoc.org
+  2. Restart Obsidian completely (not just reload)
+  3. Open terminal and verify: `pandoc --version`
+  4. If still not working, manually set Pandoc path in Settings → Manuscript Pro → Export
+
+**PDF export fails with "pdflatex not found"**
+- **Cause**: LaTeX distribution not installed
+- **Solution**:
+  - **Windows**: Install MiKTeX from https://miktex.org
+  - **macOS**: Install MacTeX from https://www.tug.org/mactex/
+  - **Linux**: `sudo apt install texlive-full` or equivalent
+
+**Citations not appearing in export**
+- **Check**:
+  1. Bibliography file exists and path is correct in frontmatter
+  2. Citation keys match exactly (`@smith2023` vs `@Smith2023`)
+  3. .bib file has valid BibTeX syntax
+- **Test**: Try `pandoc --citeproc yourfile.md -o test.pdf` manually
+
+**Cross-references showing "??" or not working**
+- **Cause**: LaTeX needs multiple passes to resolve references
+- **Solution**: This is expected on first export - export twice, or Pandoc/LaTeX will handle automatically
+
+**Math equations not rendering in DOCX**
+- **Note**: Depends on Pandoc version and Word settings
+- **Workaround**: Use PDF export for final math-heavy documents, or try `--mathml` flag
+
+### Performance Issues
+
+**Vault indexing is slow (1000+ files)**
+- **Solution**: Settings → Cross-References → Set "Max Files to Index" to 1000 or lower
+- **Note**: Only frequently-referenced files need indexing
+
+**Statistics panel updates lag**
+- **Solution**: Settings → Statistics → Increase "Refresh Interval" to 10-30 seconds
+
+**Obsidian freezes during large export**
+- **Check**: Task Manager/Activity Monitor for Pandoc process
+- **Solution**: Close other applications, or export in smaller chunks
+
+### Concealment Issues
+
+**Syntax not concealing in Live Preview**
+- **Check**:
+  1. Settings → Manuscript Pro → "Enable in Live Preview" is ON
+  2. Current view mode is Live Preview (not Source Mode or Reading Mode)
+  3. Specific syntax group is enabled (Math Delimiters, Citations, etc.)
+- **Try**: Toggle Manuscript Pro off and on (Ctrl+P → "Toggle Manuscript Pro")
+
+**Concealment reveals when not expected**
+- **Note**: Cursor proximity reveals syntax - this is intentional for editing
+- **Adjust**: Settings → Concealment → "Cursor Reveal Delay" (increase to 200-500ms)
+
+**Math symbols look wrong after concealing**
+- **Cause**: Unicode approximation vs actual LaTeX rendering
+- **Note**: Concealment is for editing comfort - export renders correctly
+
+### Citation & Bibliography Issues
+
+**Autocomplete not showing citations**
+- **Check**:
+  1. Bibliography file loaded (Settings → Citations → Bibliography File)
+  2. File exists and has valid BibTeX entries
+  3. Reload bibliography: Ribbon Menu → Citations & Bibliography → Reload Bibliography
+
+**Duplicate citations detected incorrectly**
+- **Adjust**: Settings → Enhanced Bibliography → "Duplicate Similarity Threshold"
+- **Note**: Lower = stricter matching, higher = more lenient
+
+**Citation hover preview not showing**
+- **Check**: Settings → Citations → "Citation Preview" is enabled
+- **Try**: Reload Obsidian (Ctrl+R)
+
+### Focus Mode Issues
+
+**Focus Mode UI changes not reverting**
+- **Solution**: Toggle Focus Mode off and wait 2 seconds
+- **Manual Reset**: Settings → Appearance → Show/hide UI elements manually
+
+**Typewriter dimming too aggressive**
+- **Adjust**: Settings → Focus Mode → "Dim Opacity" (try 0.5 instead of 0.3)
+- **Disable**: Uncheck "Typewriter Mode" while keeping other Focus Mode features
+
+### General Issues
+
+**Plugin not loading or grayed out**
+- **Check**:
+  1. Community Plugins are enabled (Settings → Community Plugins)
+  2. Restricted Mode is OFF
+  3. Check Developer Console (Ctrl+Shift+I) for errors
+
+**Settings changes not saving**
+- **Cause**: Vault sync conflict or permissions issue
+- **Solution**:
+  1. Disable sync temporarily
+  2. Change setting and wait 5 seconds
+  3. Reload Obsidian
+  4. Re-enable sync
+
+**Features accessible via Command Palette but not ribbon menu**
+- **Note**: This is expected - ribbon menu has most common features
+- **Solution**: Use Ctrl+P to access all 50+ commands
+
+### Getting Help
+
+If you encounter issues not covered here:
+
+1. **Check Documentation**: Review EXPORT-TESTING-GUIDE.md for detailed export testing
+2. **Enable Debug Mode**: Settings → Manuscript Pro → Enable "Verbose Logging"
+3. **Check Console**: Open Developer Console (Ctrl+Shift+I) for error messages
+4. **GitHub Issues**: https://github.com/Skquark/obsidian-manuscript-pro/issues
+   - Search existing issues first
+   - Include: Obsidian version, OS, error messages, steps to reproduce
+
+---
+
 **Manuscript Pro** - *Write better. Publish faster.*
 
 Transform your academic writing workflow today.
