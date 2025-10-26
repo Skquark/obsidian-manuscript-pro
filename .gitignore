@@ -1,0 +1,73 @@
+# vscode
+.vscode
+
+# Intellij
+*.iml
+.idea
+
+# npm
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json.bak
+
+# Don't include the compiled main.js file in the repo.
+# They should be uploaded to GitHub releases instead.
+main.js
+build/
+
+# Exclude sourcemaps
+*.map
+
+# obsidian
+data.json
+
+# Exclude macOS Finder (System Explorer) View States
+.DS_Store
+
+# Windows thumbnail cache
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files (if any)
+.env
+.env.local
+
+# ==================================================================================================
+# ===                                  Obsidian Test Vault                                       ===
+# ==================================================================================================
+
+# Exclude Dir: -------------------------------------------------------------------------------------
+test-vault/.obsidian/*
+# Include various files/subdirs in above dir: --------------------------------------------
+!test-vault/.obsidian/community-plugins.json
+!test-vault/.obsidian/plugins/
+
+# Exclude Dir: -------------------------------------------------------------------------------------
+test-vault/.obsidian/plugins/*
+# Include various files/subdirs in above dir: --------------------------------------------
+!test-vault/.obsidian/plugins/manuscript-pro/
+!test-vault/.obsidian/plugins/hot-reload/
+
+# Exclude Dir: -------------------------------------------------------------------------------------
+test-vault/.obsidian/plugins/manuscript-pro/*
+# Include various files/subdirs in above dir: --------------------------------------------
+# This empty file tells the hot-reload plugin to reload this plugin
+!test-vault/.obsidian/plugins/manuscript-pro/.hotreload
+
+# Exclude Dir: -------------------------------------------------------------------------------------
+# This will be for testing random things in the test-vault
+test-vault/untracked/*
+# Include various files/subdirs in above dir: --------------------------------------------
+!test-vault/untracked/README.md

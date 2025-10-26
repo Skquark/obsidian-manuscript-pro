@@ -1,0 +1,254 @@
+export interface Pattern {
+	regex: RegExp;
+	regexString: string; // Store string version for serialization
+	replacement: string;
+	description?: string;
+}
+
+export interface PatternGroup {
+	id: string;
+	name: string;
+	description: string;
+	enabled: boolean;
+	patterns: Pattern[];
+}
+
+export interface PluginSettings {
+	// Master toggle
+	enabled: boolean;
+
+	// Mode toggles
+	enableInLivePreview: boolean;
+	enableInReadingMode: boolean;
+	enableInSourceMode: boolean;
+
+	// Pattern groups
+	groups: {
+		mathDelimiters: boolean;
+		citations: boolean;
+		latexCommands: boolean;
+		pandocMarkup: boolean;
+		indexingMeta: boolean;
+	};
+
+	// Cursor revealing
+	cursorReveal: {
+		enabled: boolean;
+		delay: number;
+		revealParagraph: boolean;
+		highlightRevealed: boolean;
+		highlightColor: string;
+	};
+
+	// UI
+	showStatusBar: boolean;
+	showConcealedCount: boolean;
+
+	// Focus Mode
+	focusMode: {
+		enabled: boolean;
+		// Markdown concealment
+		hideMarkdownSyntax: boolean;
+		hideHeadingMarkers: boolean;
+		hideListMarkers: boolean;
+		hideBlockquoteMarkers: boolean;
+		hideInlineCode: boolean;
+		// Typewriter mode
+		typewriterMode: boolean;
+		activeZone: 'sentence' | 'paragraph' | 'section';
+		dimOpacity: number; // 0.1-0.9
+		highlightActive: boolean;
+		highlightColor: string;
+		// Reading width
+		centerText: boolean;
+		lineWidth: number; // characters, 40-120
+		// UI minimization
+		hideExplorer: boolean;
+		hideStatusBar: boolean;
+		hideRibbon: boolean;
+		enterFullscreen: boolean;
+	};
+
+	// Statistics Panel
+	statistics: {
+		enabled: boolean;
+		showInSidebar: boolean;
+		autoRefresh: boolean;
+		refreshInterval: number; // seconds
+		trackHistory: boolean;
+		showGoals: boolean;
+	};
+
+	// Citation Preview
+	citations: {
+		enabled: boolean;
+		showTooltip: boolean;
+		citationStyle: string; // APA, Chicago, MLA, etc.
+		showVisualIndicators: boolean;
+		bibliographyPaths: string[]; // User-configured .bib file paths
+		bibliographyFile?: string; // Primary bibliography file path
+		cacheTimeout: number; // minutes
+	};
+
+	// Cross-Reference Intelligence
+	crossRef: {
+		enabled: boolean;
+		autoComplete: boolean;
+		showLabelBrowser: boolean;
+		validateOnSave: boolean;
+		indexOnStartup: boolean;
+	};
+
+	// Manuscript Navigator
+	manuscriptNavigator: {
+		enabled: boolean; // Master toggle
+		showInSidebar: boolean; // Auto-open on startup
+		configFile: string; // Path to book.json (default: "book.json")
+
+		// Display options
+		showWordCount: boolean; // Show word counts
+		showFigureCount: boolean; // Show figure counts
+		showCitationCount: boolean; // Show citation counts
+		showLastModified: boolean; // Show timestamps
+
+		// Behavior
+		autoRefreshStats: boolean; // Recalc on file change
+		confirmReorder: boolean; // Confirm before reordering
+		expandPartsOnLoad: boolean; // Expand all parts by default
+
+		// Goals
+		defaultChapterWordGoal: number; // Default word count goal per chapter
+		totalWordGoal: number; // Total manuscript word count goal
+	};
+
+	// Pre-publication Validation
+	validation: {
+		enabled: boolean;
+		autoValidateOnSave: boolean;
+		showPanel: boolean;
+
+		// Rule toggles
+		validateReferences: boolean;
+		validateCitations: boolean;
+		validateFigures: boolean;
+		validateTables: boolean;
+		validateEquations: boolean;
+		validateStructure: boolean;
+
+		// Display options
+		groupByCategory: boolean;
+		hideInfoLevel: boolean;
+		showOnlyErrors: boolean;
+	};
+
+	// Export & Publishing
+	export: {
+		enabled: boolean;
+		pandocPath?: string;
+		defaultOutputDir?: string;
+		openAfterExport: boolean;
+
+		profiles: any[]; // ExportProfile[] - avoid circular dependency
+		defaultProfileId?: string;
+
+		templateDirectory?: string;
+		maxConcurrentExports: number;
+		keepIntermediateFiles: boolean;
+		verboseLogging: boolean;
+	};
+
+	// Enhanced Bibliography
+	enhancedBib: {
+		enabled: boolean;
+
+		// Auto-import
+		enableAutoImport: boolean;
+		preferredFormat: 'bibtex' | 'json';
+
+		// External APIs
+		apiConfig: {
+			crossrefEmail?: string;
+			pubmedApiKey?: string;
+			pubmedEmail?: string;
+			rateLimitDelay?: number;
+		};
+
+		// Duplicate detection
+		enableDuplicateDetection: boolean;
+		duplicateSimilarityThreshold: number;
+		autoMergeDuplicates: boolean;
+
+		// Smart suggestions
+		enableSmartSuggestions: boolean;
+		suggestionContextWindow: number;
+		maxSuggestions: number;
+
+		// Analytics
+		trackCitationUsage: boolean;
+		showAnalytics: boolean;
+	};
+
+	// Template & Snippet System
+	templates: {
+		enabled: boolean;
+		customTemplatesPath: string;
+		customSnippetsPath: string;
+		enableTriggers: boolean;
+		showTemplateInserter: boolean;
+		enableVariableHints: boolean;
+	};
+
+	// Quality & Workflow Enhancements
+	quality: {
+		// Pre-Publication Checklist
+		checklist: {
+			enabled: boolean;
+			showPanel: boolean;
+			autoCheckEnabled: boolean;
+			defaultType: 'academic-paper' | 'thesis' | 'technical-doc' | 'conference-paper' | 'grant-proposal';
+		};
+
+		// Enhanced Progress Tracking
+		progress: {
+			enabled: boolean;
+			trackSessions: boolean;
+			trackStreaks: boolean;
+			calculateVelocity: boolean;
+			showInStatusBar: boolean;
+			autoSnapshot: boolean;
+			snapshotInterval: number; // minutes
+		};
+
+		// Research Knowledge Base
+		researchBible: {
+			enabled: boolean;
+			autoDetectTerms: boolean;
+			checkConsistency: boolean;
+			showInlineHints: boolean;
+			exportFormat: 'markdown' | 'latex' | 'html';
+		};
+
+		// Readability Analysis
+		readability: {
+			enabled: boolean;
+			targetAudience: 'general-public' | 'undergraduate' | 'graduate' | 'expert' | 'journal';
+			showInlineWarnings: boolean;
+			analyzeSections: boolean;
+			highlightPassiveVoice: boolean;
+			exportReports: boolean;
+		};
+	};
+
+	// Advanced
+	debugMode: boolean;
+	customPatterns: string[];
+	performance: {
+		viewportBuffer: number;
+		debounceDelay: number;
+		maxDecorationsPerUpdate: number;
+	};
+
+	// Legacy support for migration
+	regexp?: Array<string>;
+	doConcealEditMode?: boolean;
+}

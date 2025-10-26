@@ -1,0 +1,57 @@
+{
+	"name": "obsidian-manuscript-pro",
+	"version": "0.1.0",
+	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export.",
+	"main": "main.js",
+	"type": "commonjs",
+	"scripts": {
+		"dev": "rollup --config rollup.config.mjs -w --environment BUILD:dev",
+		"build": "rollup --config rollup.config.mjs --environment BUILD:prod"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Skquark/obsidian-manuscript-pro.git"
+	},
+	"keywords": [
+		"obsidian",
+		"latex",
+		"pandoc",
+		"markdown",
+		"academic-writing",
+		"manuscript",
+		"publishing",
+		"citations",
+		"bibliography",
+		"cross-references",
+		"templates",
+		"export"
+	],
+	"author": "Alan Bedian (based on Dynamic Text Concealer by Matt Cole Anderson)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/Skquark/obsidian-manuscript-pro/issues"
+	},
+	"homepage": "https://github.com/Skquark/obsidian-manuscript-pro#readme",
+	"dependencies": {
+		"@codemirror/language": "^6.9.2",
+		"@codemirror/state": "^6.3.1",
+		"@codemirror/view": "^6.22.0",
+		"uuid": "^9.0.1"
+	},
+	"devDependencies": {
+		"@rollup/plugin-commonjs": "^25.0.7",
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-typescript": "^11.1.5",
+		"@types/node": "^16.11.6",
+		"@types/uuid": "^9.0.7",
+		"@typescript-eslint/eslint-plugin": "5.29.0",
+		"@typescript-eslint/parser": "5.29.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.17.3",
+		"obsidian": "latest",
+		"rollup": "^4.1.4",
+		"rollup-plugin-copy": "^3.5.0",
+		"tslib": "2.4.0",
+		"typescript": "^5.3.2"
+	}
+}

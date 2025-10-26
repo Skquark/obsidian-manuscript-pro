@@ -1,0 +1,184 @@
+import { EditorSelection, StateEffect } from '@codemirror/state';
+import {
+	Decoration,
+	DecorationSet,
+	EditorView,
+	MatchDecorator,
+	PluginSpec,
+	PluginValue,
+	ViewPlugin,
+	ViewUpdate,
+} from '@codemirror/view';
+import { editorLivePreviewField } from 'obsidian';
+import { ConcealMatchDecorator } from './conceal-match-decorator';
+import { syntaxTree } from '@codemirror/language';
+import { PluginSettings } from '../interfaces/plugin-settings';
+
+class ConcealViewPlugin implements PluginValue {
+	decorations: DecorationSet;
+	matchDecorator: MatchDecorator;
+	settings: PluginSettings;
+	cursorLineFrom: number = -1;
+	cursorLineTo: number = -1;
+
+	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings) {
+		this.settings = settings;
+		this.matchDecorator = new ConcealMatchDecorator({
+			regexp: regexp,
+			decorate: (add, from, to, match, view): void => {
+				// Define conditions where a decorator should not be added for a match
+				if (this.isCodeblock(view, from, to)) return;
+
+				// Cursor-aware revealing: skip decoration if cursor is on this line
+				if (this.settings.cursorReveal.enabled && this.isCursorOnLine(view, from, to)) {
+					return;
+				}
+
+				if (this.selectionAndRangeOverlap(view.state.selection, from, to)) return;
+
+				// Add mark decorator for each capture group in regex
+				for (let i = 1; i < match.length; i++) {
+					if (!match.indices) continue;
+
+					const startPos = from + (match.indices[i][0] - match.index);
+					const finalPos = from + (match.indices[i][1] - match.index);
+					add(startPos, finalPos, Decoration.mark({ class: 'manuscript-pro-hide-match' }));
+				}
+
+				// If no capture groups, hide the entire match
+				if (match.length === 1) {
+					add(from, to, Decoration.mark({ class: 'manuscript-pro-hide-match' }));
+				}
+			},
+		});
+
+		this.decorations = this.initializeDecorations(view);
+	}
+
+	/**
+	 * Check if cursor is on a line containing the match
+	 */
+	private isCursorOnLine(view: EditorView, from: number, to: number): boolean {
+		const selection = view.state.selection.main;
+		const cursorPos = selection.head;
+
+		// Get line boundaries
+		const line = view.state.doc.lineAt(cursorPos);
+
+		if (this.settings.cursorReveal.revealParagraph) {
+			// Reveal entire paragraph (block of text separated by blank lines)
+			let paragraphStart = line.from;
+			let paragraphEnd = line.to;
+
+			// Scan backwards for paragraph start
+			let currentLine = line.number - 1;
+			while (currentLine > 0) {
+				const prevLine = view.state.doc.line(currentLine);
+				if (prevLine.text.trim() === '') break;
+				paragraphStart = prevLine.from;
+				currentLine--;
+			}
+
+			// Scan forwards for paragraph end
+			currentLine = line.number + 1;
+			const totalLines = view.state.doc.lines;
+			while (currentLine <= totalLines) {
+				const nextLine = view.state.doc.line(currentLine);
+				if (nextLine.text.trim() === '') break;
+				paragraphEnd = nextLine.to;
+				currentLine++;
+			}
+
+			return from >= paragraphStart && to <= paragraphEnd;
+		} else {
+			// Reveal just the current line
+			return from >= line.from && to <= line.to;
+		}
+	}
+
+	/**
+	 * isCodeblock returns true if the current match overlaps with a code block
+	 */
+	private isCodeblock(view: EditorView, from: number, to: number): boolean {
+		let isCodeblock = false;
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: (node) => {
+				if (/^inline-code/.test(node.name) || node.name == 'HyperMD-codeblock_HyperMD-codeblock-bg') {
+					isCodeblock = true;
+					return false;
+				}
+			},
+		});
+		return isCodeblock;
+	}
+
+	/**
+	 * selectionAndRangeOverlap returns true if the specified range
+	 * overlaps with the current cursor location or selection range
+	 */
+	private selectionAndRangeOverlap(selection: EditorSelection, rangeFrom: number, rangeTo: number): boolean {
+		for (const range of selection.ranges) {
+			if (range.from <= rangeTo && range.to >= rangeFrom) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	update(update: ViewUpdate) {
+		const isSourceMode = !update.state.field(editorLivePreviewField);
+		const isEditorLayoutChanged = update.transactions.some((t) =>
+			t.effects.some((e) => e.is(workspaceLayoutChangeEffect)),
+		);
+
+		// Reinitialize Decorations if source mode or recently switched back to Live Preview
+		if (isSourceMode || isEditorLayoutChanged) {
+			this.decorations = this.initializeDecorations(update.view);
+			return;
+		}
+
+		// Track cursor line changes for revealing
+		const selection = update.state.selection.main;
+		const cursorLine = update.state.doc.lineAt(selection.head);
+		const cursorLineChanged = cursorLine.from !== this.cursorLineFrom || cursorLine.to !== this.cursorLineTo;
+
+		if (cursorLineChanged && this.settings.cursorReveal.enabled) {
+			this.cursorLineFrom = cursorLine.from;
+			this.cursorLineTo = cursorLine.to;
+			// Force redecorating when cursor moves to a new line
+			this.decorations = this.matchDecorator.createDeco(update.view);
+			return;
+		}
+
+		// Update DecorationSet with MatchDecorator
+		this.decorations = this.matchDecorator.updateDeco(update, this.decorations);
+	}
+
+	destroy() {}
+
+	/**
+	 * Initializes DecorationSet. Is disabled if the editor is in source mode.
+	 */
+	private initializeDecorations(view: EditorView): DecorationSet {
+		return view.state.field(editorLivePreviewField) ? this.matchDecorator.createDeco(view) : Decoration.none;
+	}
+}
+
+const pluginSpec: PluginSpec<ConcealViewPlugin> = {
+	decorations: (instance: ConcealViewPlugin) => instance.decorations,
+};
+
+/**
+ * concealViewPlugin creates a ViewPlugin to be registered as an editorExtension
+ */
+export const concealViewPlugin = (regexp: RegExp, settings: PluginSettings) => {
+	return ViewPlugin.define((view) => new ConcealViewPlugin(view, regexp, settings), pluginSpec);
+};
+
+/**
+ * A state effect that represents the workspace's layout change.
+ * Mainly intended to detect when the user switches between live preview and source mode.
+ */
+export const workspaceLayoutChangeEffect = StateEffect.define<null>();
