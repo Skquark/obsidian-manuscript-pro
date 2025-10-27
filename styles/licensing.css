@@ -3,71 +3,90 @@
 /* Upgrade Modal */
 .manuscript-upgrade-modal .modal-content {
 	max-width: 600px;
-	padding: var(--size-4-6);
+	padding: 2rem 1.75rem;
 }
 
 .manuscript-upgrade-header {
 	text-align: center;
-	margin-bottom: var(--size-4-3);
+	margin-bottom: 0.75rem;
 }
 
 .manuscript-upgrade-header h2 {
 	margin: 0;
 	font-size: 1.8em;
+	font-weight: 600;
 	color: var(--text-normal);
+	letter-spacing: -0.5px;
 }
 
 .manuscript-pro-badge {
 	text-align: center;
-	margin-bottom: var(--size-4-4);
+	margin-bottom: 1.25rem;
 }
 
 .manuscript-pro-badge span {
 	display: inline-block;
-	padding: var(--size-4-1) var(--size-4-3);
+	padding: 0.375rem 0.875rem;
 	background: linear-gradient(135deg, #ffd700, #ffed4e);
 	color: #000;
-	border-radius: var(--radius-s);
+	border-radius: 6px;
 	font-weight: 600;
 	font-size: 0.9em;
 	letter-spacing: 0.5px;
 }
 
 .manuscript-upgrade-description {
-	font-size: 1.1em;
+	font-size: 1.05em;
 	color: var(--text-muted);
 	line-height: 1.6;
-	margin-bottom: var(--size-4-5);
+	margin-bottom: 1.5rem;
 	text-align: center;
+	padding: 0 0.5rem;
 }
 
 .manuscript-upgrade-benefits {
-	margin-bottom: var(--size-4-6);
+	margin-bottom: 1.5rem;
 	background: var(--background-secondary);
-	padding: var(--size-4-4);
-	border-radius: var(--radius-m);
+	padding: 1.25rem;
+	border-radius: 12px;
 	border: 1px solid var(--background-modifier-border);
 }
 
 .manuscript-upgrade-benefits h3 {
 	margin-top: 0;
-	margin-bottom: var(--size-4-3);
+	margin-bottom: 1rem;
 	font-size: 1.1em;
+	font-weight: 600;
 	color: var(--text-normal);
 }
 
 .manuscript-upgrade-benefits ul {
-	list-style: none;
+	list-style: none !important;
+	list-style-type: none !important;
 	padding: 0;
+	padding-left: 0 !important;
 	margin: 0;
 }
 
 .manuscript-upgrade-benefits li {
-	padding: var(--size-4-2) 0;
+	padding: 0.625rem 0;
 	color: var(--text-normal);
 	display: flex;
 	align-items: flex-start;
-	gap: var(--size-4-2);
+	gap: 0.75rem;
+	line-height: 1.5;
+	list-style: none !important;
+	list-style-type: none !important;
+}
+
+.manuscript-upgrade-benefits li::before {
+	content: none !important;
+	display: none !important;
+}
+
+.manuscript-upgrade-benefits li::marker {
+	content: none !important;
+	display: none !important;
 }
 
 .manuscript-check-mark {
@@ -79,9 +98,9 @@
 .manuscript-upgrade-pricing {
 	text-align: center;
 	background: var(--background-primary-alt);
-	padding: var(--size-4-5);
-	border-radius: var(--radius-m);
-	margin-bottom: var(--size-4-5);
+	padding: 1.5rem;
+	border-radius: 12px;
+	margin-bottom: 1.5rem;
 	border: 2px solid var(--interactive-accent);
 }
 
@@ -89,64 +108,84 @@
 	font-size: 1.2em;
 	font-weight: 600;
 	color: var(--text-normal);
-	margin-bottom: var(--size-4-2);
+	margin-bottom: 0.75rem;
+	line-height: 1.3;
 }
 
 .manuscript-price-container {
-	margin: var(--size-4-3) 0;
+	margin: 1rem 0;
 }
 
 .manuscript-upgrade-price {
 	font-size: 3em;
 	font-weight: bold;
 	color: var(--interactive-accent);
-	line-height: 1;
+	line-height: 1.2;
+	margin-bottom: 0.5rem;
 }
 
 .manuscript-upgrade-subtitle {
 	font-size: 1em;
 	color: var(--text-muted);
-	margin-bottom: var(--size-4-2);
+	margin-bottom: 0.75rem;
+	line-height: 1.6;
 }
 
 .manuscript-upgrade-note {
 	font-size: 0.9em;
 	color: var(--text-faint);
 	font-style: italic;
+	line-height: 1.5;
+	margin-top: 0.5rem;
 }
 
 .manuscript-upgrade-buttons {
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-2);
-	margin-bottom: var(--size-4-4);
+	gap: 1rem;
+	margin-top: 2rem;
+	margin-bottom: 1.5rem;
 }
 
 .manuscript-upgrade-buttons button {
-	padding: var(--size-4-3) var(--size-4-4);
+	padding: 0.875rem 1.5rem;
 	font-size: 1em;
-	border-radius: var(--radius-s);
+	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s;
-	border: none;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-weight: 500;
+	width: 100%;
+	display: block;
+}
+
+.manuscript-upgrade-buttons button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .manuscript-upgrade-buttons button.mod-cta {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
 	font-weight: 600;
-	font-size: 1.1em;
+	font-size: 1.05em;
+	padding: 1rem 1.5rem;
+	margin-bottom: 0.5rem;
 }
 
 .manuscript-upgrade-buttons button.mod-cta:hover {
 	background: var(--interactive-accent-hover);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .manuscript-cancel-btn {
 	background: transparent !important;
 	color: var(--text-muted) !important;
+	border-color: transparent !important;
 }
 
 .manuscript-cancel-btn:hover {
@@ -156,14 +195,16 @@
 
 .manuscript-upgrade-footer {
 	text-align: center;
-	padding-top: var(--size-4-3);
+	padding-top: 1.5rem;
+	margin-top: 0.5rem;
 	border-top: 1px solid var(--background-modifier-border);
 }
 
 .manuscript-upgrade-footer a {
 	color: var(--interactive-accent);
 	text-decoration: none;
-	font-weight: 500;
+	font-weight: 600;
+	font-size: 0.95em;
 }
 
 .manuscript-upgrade-footer a:hover {
@@ -172,29 +213,34 @@
 
 /* License Modal */
 .manuscript-license-modal .modal-content {
-	max-width: 550px;
-	padding: var(--size-4-6);
+	max-width: 580px;
+	padding: 2.5rem 2rem;
 }
 
 .manuscript-license-modal h2 {
 	text-align: center;
-	margin-bottom: var(--size-4-4);
-	font-size: 1.6em;
+	margin-bottom: 0.75rem;
+	font-size: 1.8em;
+	font-weight: 600;
+	letter-spacing: -0.5px;
 }
 
 .manuscript-license-success {
 	text-align: center;
 	color: var(--text-muted);
-	font-size: 1.05em;
-	margin-bottom: var(--size-4-5);
+	font-size: 1.1em;
+	margin-bottom: 1rem;
+	line-height: 1.5;
 }
 
 .manuscript-license-info {
 	background: var(--background-secondary);
-	padding: var(--size-4-4);
-	border-radius: var(--radius-m);
-	margin-bottom: var(--size-4-5);
+	padding: 1.5rem;
+	border-radius: 12px;
+	margin-bottom: 2rem;
+	margin-top: 1.5rem;
 	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .manuscript-info-grid {
@@ -261,74 +307,167 @@
 
 .manuscript-license-actions {
 	display: flex;
-	gap: var(--size-4-2);
+	gap: 1rem;
 	justify-content: center;
+	flex-wrap: wrap;
+	margin-top: 2rem;
 }
 
 .manuscript-license-actions button {
-	padding: var(--size-4-2) var(--size-4-4);
-	border-radius: var(--radius-s);
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s;
+	font-size: 0.95em;
+	font-weight: 500;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	min-width: 140px;
+}
+
+.manuscript-license-actions button:hover {
+	background: var(--background-modifier-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.manuscript-license-actions button.mod-cta {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	font-weight: 600;
+}
+
+.manuscript-license-actions button.mod-cta:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.manuscript-license-actions button.mod-warning {
+	background: transparent;
+	color: var(--text-error);
+	border-color: var(--text-error);
+}
+
+.manuscript-license-actions button.mod-warning:hover {
+	background: var(--background-modifier-error);
+}
+
+.manuscript-activation-header {
+	margin-bottom: 0.75rem;
+}
+
+.manuscript-activation-header h2 {
+	text-align: center;
+	margin: 0;
+	font-size: 1.8em;
+	font-weight: 600;
+	letter-spacing: -0.5px;
 }
 
 .manuscript-activation-description {
 	text-align: center;
 	color: var(--text-muted);
-	margin-bottom: var(--size-4-5);
+	margin-bottom: 1rem;
 	font-size: 1.05em;
+	line-height: 1.6;
+	padding: 0 1rem;
 }
 
 .manuscript-activation-form {
-	margin-bottom: var(--size-4-5);
+	margin-bottom: 2rem;
+	margin-top: 1.5rem;
+	background: var(--background-secondary);
+	padding: 1.5rem;
+	border-radius: 12px;
+	border: 1px solid var(--background-modifier-border);
 }
 
 .manuscript-activation-form .setting-item {
 	border: none;
 	padding: var(--size-4-3) 0;
+	margin-bottom: var(--size-4-2);
+}
+
+.manuscript-activation-form .setting-item:last-child {
+	margin-bottom: 0;
 }
 
 .manuscript-activation-form .setting-item-name {
 	font-weight: 600;
 	color: var(--text-normal);
+	font-size: 0.95em;
 }
 
 .manuscript-activation-form .setting-item-description {
 	color: var(--text-muted);
 	font-size: 0.9em;
+	margin-top: var(--size-2-1);
+}
+
+.manuscript-activation-form input[type='text'],
+.manuscript-activation-form input[type='email'] {
+	background: var(--background-primary);
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.75rem;
+	font-size: 1em;
+	transition: all 0.2s;
+}
+
+.manuscript-activation-form input[type='text']:focus,
+.manuscript-activation-form input[type='email']:focus {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.1);
+	outline: none;
 }
 
 .manuscript-activation-buttons {
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-2);
-	margin-bottom: var(--size-4-4);
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	margin-top: 1.5rem;
 }
 
 .manuscript-activation-buttons button {
-	padding: var(--size-4-3) var(--size-4-4);
+	padding: 0.875rem 1.5rem;
 	font-size: 1em;
-	border-radius: var(--radius-s);
+	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s;
-	border: none;
+	border: 1px solid var(--background-modifier-border);
+	font-weight: 500;
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.manuscript-activation-buttons button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .manuscript-activation-buttons button.mod-cta {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 	font-weight: 600;
+	border-color: var(--interactive-accent);
+	font-size: 1.05em;
+	padding: 1rem 1.5rem;
+	margin-bottom: 0.5rem;
 }
 
 .manuscript-activation-buttons button.mod-cta:hover {
 	background: var(--interactive-accent-hover);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .manuscript-activation-footer {
 	text-align: center;
-	padding-top: var(--size-4-3);
+	padding-top: 1.5rem;
+	margin-top: 1rem;
 	border-top: 1px solid var(--background-modifier-border);
-	font-size: 0.9em;
+	font-size: 0.95em;
 	color: var(--text-muted);
 }
 
@@ -340,7 +479,7 @@
 .manuscript-activation-footer a {
 	color: var(--interactive-accent);
 	text-decoration: none;
-	font-weight: 500;
+	font-weight: 600;
 }
 
 .manuscript-activation-footer a:hover {

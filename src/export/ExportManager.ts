@@ -4,9 +4,18 @@
  */
 
 import { Notice, TFile } from 'obsidian';
+import * as path from 'path';
 import type LatexPandocConcealerPlugin from '../main';
 import { ExportEngine } from './ExportEngine';
-import type { ExportProfile, ExportResult, TemplateInfo } from './ExportInterfaces';
+import type {
+	ExportProfile,
+	ExportResult,
+	TemplateInfo,
+	BatchExportOptions,
+	BatchExportResult,
+	ExportFormat,
+	ExportProfileVariant,
+} from './ExportInterfaces';
 import { DEFAULT_EXPORT_PROFILES } from './ExportInterfaces';
 
 export class ExportManager {
@@ -160,10 +169,12 @@ export class ExportManager {
 		// Check if Pandoc is available before attempting export
 		const pandocAvailable = await this.exportEngine.checkPandocAvailable();
 		if (!pandocAvailable) {
-			new Notice('Pandoc not found. Please install Pandoc from https://pandoc.org to use export features.');
+			// Show installation modal instead of just an error
+			const { PandocInstallModal } = await import('./PandocInstallModal');
+			new PandocInstallModal(this.plugin.app).open();
 			return {
 				success: false,
-				error: 'Pandoc not found. Please install Pandoc from https://pandoc.org',
+				error: 'Pandoc not found',
 			};
 		}
 
@@ -186,6 +197,24 @@ export class ExportManager {
 		// Extract metadata
 		const metadata = await this.exportEngine.extractMetadata(files);
 
+		// Auto-detect bibliography files if not already configured
+		if (!profile.pandocOptions.bibliography || profile.pandocOptions.bibliography.length === 0) {
+			// Try to discover bibliography from the first file
+			if (files.length > 0) {
+				const bibPaths = await this.plugin.bibliographyManager.discoverBibliography(files[0]);
+				if (bibPaths.length > 0) {
+					// Convert to absolute paths
+					profile.pandocOptions.bibliography = bibPaths.map((bibPath) => {
+						// If path is relative, resolve it relative to vault
+						if (!bibPath.startsWith('/') && !bibPath.match(/^[A-Z]:/)) {
+							return `${vaultPath}/${bibPath}`;
+						}
+						return bibPath;
+					});
+				}
+			}
+		}
+
 		// Perform export
 		const result = await this.exportEngine.exportManuscript(profile, inputPaths, outputPath, metadata);
 
@@ -204,8 +233,33 @@ export class ExportManager {
 				console.warn('Export warnings:', result.warnings);
 			}
 		} else {
-			const message = `Export failed: ${result.error}`;
-			new Notice(message);
+			// Check if error is due to missing LaTeX engine
+			const errorText = (result.error || '') + (result.pandocOutput || '');
+
+			if (
+				errorText.includes('pdflatex not found') ||
+				errorText.includes('xelatex not found') ||
+				errorText.includes('lualatex not found')
+			) {
+				// Show LaTeX installation modal
+				const { LaTeXInstallModal } = await import('./LaTeXInstallModal');
+				new LaTeXInstallModal(this.plugin.app).open();
+			} else if (errorText.includes('MiKTeX updates') || errorText.includes(".sty' not found")) {
+				// MiKTeX package installation issue
+				new Notice(
+					'MiKTeX needs to install packages. Please open MiKTeX Console, check for updates, and set "Install missing packages" to "Yes" in Settings.',
+					10000,
+				);
+			} else if (errorText.includes('Undefined control sequence') && errorText.includes('setchapterimage')) {
+				// Custom LaTeX command not supported
+				new Notice(
+					'Your document contains custom LaTeX commands (like \\setchapterimage) that require a custom LaTeX template. Try exporting to DOCX or Markdown instead.',
+					10000,
+				);
+			} else {
+				const message = `Export failed: ${result.error}`;
+				new Notice(message, 8000);
+			}
 			console.error('Export error:', result.error);
 			if (result.pandocOutput) {
 				console.error('Pandoc output:', result.pandocOutput);
@@ -323,5 +377,185 @@ export class ExportManager {
 	 */
 	clearCompletedTasks(): void {
 		this.exportEngine.clearCompletedTasks();
+	}
+
+	/**
+	 * Export to multiple formats in batch
+	 */
+	async exportMultipleFormats(
+		options: BatchExportOptions,
+		inputFiles: TFile[],
+		metadata?: any,
+	): Promise<BatchExportResult> {
+		const results = new Map<ExportFormat, ExportResult>();
+		const startTime = Date.now();
+
+		// Check Pandoc availability first
+		const pandocAvailable = await this.exportEngine.checkPandocAvailable();
+		if (!pandocAvailable) {
+			const { PandocInstallModal } = await import('./PandocInstallModal');
+			new PandocInstallModal(this.plugin.app).open();
+			return {
+				results,
+				totalDuration: 0,
+				successCount: 0,
+				failureCount: options.formats.length,
+			};
+		}
+
+		// Get file paths
+		const vaultPath = (this.plugin.app.vault.adapter as any).basePath || '';
+		const inputPaths = inputFiles.map((f) => `${vaultPath}/${f.path}`);
+
+		// Extract metadata if not provided
+		const exportMetadata = metadata || (await this.exportEngine.extractMetadata(inputFiles));
+
+		// Show initial progress
+		new Notice(`Batch export started: ${options.formats.length} formats`, 3000);
+
+		for (const format of options.formats) {
+			// Create format-specific profile
+			const profile: ExportProfile = {
+				...options.baseProfile,
+				format,
+				...(options.formatOverrides?.[format] || {}),
+			};
+
+			const outputPath = path.join(options.outputDirectory, `${options.filenameBase}.${format}`);
+
+			// Show current format
+			new Notice(`Exporting ${format.toUpperCase()}...`, 2000);
+
+			// Export this format
+			const result = await this.exportEngine.exportManuscript(profile, inputPaths, outputPath, exportMetadata);
+
+			results.set(format, result);
+
+			// Stop on critical failures if configured
+			if (!result.success && this.plugin.settings.export?.verboseLogging) {
+				console.error(`Batch export: ${format} failed:`, result.error);
+			}
+		}
+
+		const totalDuration = Date.now() - startTime;
+		const successCount = Array.from(results.values()).filter((r) => r.success).length;
+		const failureCount = Array.from(results.values()).filter((r) => !r.success).length;
+
+		// Show completion summary
+		if (successCount === options.formats.length) {
+			new Notice(`✓ Batch export completed: ${successCount}/${options.formats.length} formats`, 5000);
+		} else if (successCount > 0) {
+			new Notice(`⚠ Batch export completed with errors: ${successCount}/${options.formats.length} succeeded`, 8000);
+		} else {
+			new Notice(`✗ Batch export failed: All formats failed`, 8000);
+		}
+
+		return {
+			results,
+			totalDuration,
+			successCount,
+			failureCount,
+		};
+	}
+
+	/**
+	 * Filter files by profile variant (test/sample/full builds)
+	 */
+	private filterFilesByVariant(files: TFile[], variant?: ExportProfileVariant): TFile[] {
+		if (!variant || variant.chapterSelection.type === 'all') {
+			return files;
+		}
+
+		const selection = variant.chapterSelection;
+
+		switch (selection.type) {
+			case 'count':
+				return files.slice(0, selection.count);
+
+			case 'range':
+				return files.slice(selection.start - 1, selection.end);
+
+			case 'percentage':
+				const count = Math.ceil((files.length * selection.percentage) / 100);
+				return files.slice(0, count);
+
+			case 'custom':
+				return files.filter((f) => selection.chapterIds.includes(f.basename));
+
+			default:
+				return files;
+		}
+	}
+
+	/**
+	 * Export with variant filtering applied
+	 */
+	async exportWithVariant(files: TFile[], profileId?: string, variant?: ExportProfileVariant): Promise<ExportResult> {
+		// Apply variant filtering
+		const filteredFiles = this.filterFilesByVariant(files, variant);
+
+		if (filteredFiles.length === 0) {
+			return {
+				success: false,
+				error: 'No files match the variant selection',
+			};
+		}
+
+		// Show info about filtered files
+		if (variant && variant.chapterSelection.type !== 'all') {
+			new Notice(`${variant.name}: Exporting ${filteredFiles.length}/${files.length} chapters`, 3000);
+		}
+
+		return this.exportFiles(filteredFiles, profileId);
+	}
+
+	/**
+	 * Quick test export (first 3 chapters)
+	 */
+	async quickTestExport(): Promise<ExportResult> {
+		// Get manuscript files
+		if (!this.plugin.manuscriptNavigator) {
+			return {
+				success: false,
+				error: 'Manuscript Navigator not initialized',
+			};
+		}
+
+		const structure = this.plugin.manuscriptNavigator.getStructure();
+		if (!structure) {
+			return {
+				success: false,
+				error: 'No manuscript structure found',
+			};
+		}
+
+		// Collect all chapter files
+		const files: TFile[] = [];
+		if (structure.chapters && structure.chapters.length > 0) {
+			for (const chapter of structure.chapters) {
+				if (chapter.included && chapter.file) {
+					const file = this.plugin.app.vault.getAbstractFileByPath(chapter.file);
+					if (file instanceof TFile) {
+						files.push(file);
+					}
+				}
+			}
+		}
+
+		if (files.length === 0) {
+			return {
+				success: false,
+				error: 'No chapter files found',
+			};
+		}
+
+		// Apply test variant (first 3 chapters)
+		const testVariant: ExportProfileVariant = {
+			id: 'test',
+			name: 'Test Build (First 3 Chapters)',
+			chapterSelection: { type: 'count', count: 3 },
+		};
+
+		return this.exportWithVariant(files, undefined, testVariant);
 	}
 }

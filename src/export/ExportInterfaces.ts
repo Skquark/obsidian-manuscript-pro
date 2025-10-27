@@ -5,6 +5,45 @@
 
 export type ExportFormat = 'pdf' | 'docx' | 'html' | 'epub' | 'latex' | 'markdown';
 
+/**
+ * Export profile variants for different build types
+ */
+export interface ExportProfileVariant {
+	id: 'full' | 'test' | 'sample' | 'custom';
+	name: string;
+	chapterSelection: ChapterSelection;
+}
+
+export type ChapterSelection =
+	| { type: 'all' }
+	| { type: 'range'; start: number; end: number }
+	| { type: 'count'; count: number }
+	| { type: 'percentage'; percentage: number }
+	| { type: 'custom'; chapterIds: string[] };
+
+export const PROFILE_VARIANTS: ExportProfileVariant[] = [
+	{
+		id: 'full',
+		name: 'Full Manuscript',
+		chapterSelection: { type: 'all' },
+	},
+	{
+		id: 'test',
+		name: 'Test Build (First 3 Chapters)',
+		chapterSelection: { type: 'count', count: 3 },
+	},
+	{
+		id: 'sample',
+		name: 'Sample (First 10%)',
+		chapterSelection: { type: 'percentage', percentage: 10 },
+	},
+	{
+		id: 'custom',
+		name: 'Custom Selection',
+		chapterSelection: { type: 'custom', chapterIds: [] },
+	},
+];
+
 export type PdfEngine = 'pdflatex' | 'xelatex' | 'lualatex' | 'tectonic';
 
 export interface ExportProfile {
@@ -18,16 +57,47 @@ export interface ExportProfile {
 
 	// Template settings
 	template?: string; // Template file path or name
-	templateVariables?: Record<string, string>;
+	templateVariables?: Record<string, string>; // Legacy key-value variables
+	templateConfig?: string; // Reference to TemplateConfiguration ID (new system)
 
 	// File settings
 	outputPath?: string; // Default output directory
 	filenamePattern?: string; // e.g., "${title}-${date}.pdf"
 
+	// Trim size (for book publishing)
+	trimSize?: string; // Reference to TrimSize preset ID (e.g., "6x9", "7x10")
+
+	// Profile variant (test/sample/full builds)
+	variant?: ExportProfileVariant;
+
+	// Post-processing
+	postProcessing?: PostProcessingOptions;
+
+	// EPUB validation
+	validateEpub?: boolean; // Automatically validate EPUB after generation
+
 	// Metadata
 	isBuiltIn: boolean;
 	createdAt: number;
 	lastUsed?: number;
+}
+
+/**
+ * Post-processing options for PDF exports
+ */
+export interface PostProcessingOptions {
+	compression?: CompressionSettings;
+	linearize?: boolean; // Fast web view
+	optimize?: boolean; // Additional PDF optimization
+}
+
+export type CompressionLevel = 'none' | 'screen' | 'ebook' | 'printer' | 'prepress';
+
+export interface CompressionSettings {
+	level: CompressionLevel;
+	detectDuplicateImages: boolean;
+	downsampleImages: boolean;
+	embedFonts: boolean;
 }
 
 export interface PandocOptions {
@@ -90,6 +160,27 @@ export interface ExportResult {
 	duration?: number; // milliseconds
 }
 
+/**
+ * Batch export options for multi-format exports
+ */
+export interface BatchExportOptions {
+	formats: ExportFormat[];
+	baseProfile: ExportProfile;
+	formatOverrides?: Partial<Record<ExportFormat, Partial<ExportProfile>>>;
+	outputDirectory: string;
+	filenameBase: string; // e.g., "my-novel" → "my-novel.pdf", "my-novel.epub"
+}
+
+/**
+ * Results from batch export operation
+ */
+export interface BatchExportResult {
+	results: Map<ExportFormat, ExportResult>;
+	totalDuration: number;
+	successCount: number;
+	failureCount: number;
+}
+
 export interface TemplateInfo {
 	id: string;
 	name: string;
@@ -112,6 +203,8 @@ export interface ExportSettings {
 	// General
 	enabled: boolean;
 	pandocPath?: string; // Path to Pandoc executable (auto-detect if empty)
+	ghostscriptPath?: string; // Path to Ghostscript executable (auto-detect if empty)
+	epubCheckPath?: string; // Path to EPUBCheck JAR file (auto-detect if empty)
 	defaultOutputDir?: string; // Default export directory
 	openAfterExport: boolean;
 

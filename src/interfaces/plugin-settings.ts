@@ -149,6 +149,7 @@ export interface PluginSettings {
 		enabled: boolean;
 		pandocPath?: string;
 		defaultOutputDir?: string;
+		defaultCslPath?: string;
 		openAfterExport: boolean;
 
 		profiles: any[]; // ExportProfile[] - avoid circular dependency
@@ -158,6 +159,12 @@ export interface PluginSettings {
 		maxConcurrentExports: number;
 		keepIntermediateFiles: boolean;
 		verboseLogging: boolean;
+
+		// PDF compression
+		ghostscriptPath?: string;
+
+		// EPUB validation
+		epubCheckPath?: string;
 	};
 
 	// Enhanced Bibliography

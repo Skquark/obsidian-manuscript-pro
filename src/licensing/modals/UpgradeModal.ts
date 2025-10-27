@@ -10,12 +10,7 @@ export class UpgradeModal extends Modal {
 	private feature: ProFeature;
 	private context?: string;
 
-	constructor(
-		app: App,
-		plugin: ManuscriptProPlugin,
-		feature: ProFeature,
-		context?: string
-	) {
+	constructor(app: App, plugin: ManuscriptProPlugin, feature: ProFeature, context?: string) {
 		super(app);
 		this.plugin = plugin;
 		this.feature = feature;
@@ -30,15 +25,11 @@ export class UpgradeModal extends Modal {
 		// Get feature info
 		const featureInfo = this.plugin.featureGate.getFeatureInfo(this.feature);
 
-		// Header
+		// Header with inline Pro badge
 		const header = contentEl.createDiv({ cls: 'manuscript-upgrade-header' });
-		header.createEl('h2', {
-			text: `${featureInfo.icon} ${featureInfo.name}`,
-		});
-
-		// Pro badge
-		const badge = contentEl.createDiv({ cls: 'manuscript-pro-badge' });
-		badge.createEl('span', { text: '⭐ Pro Feature' });
+		const titleEl = header.createEl('h2');
+		titleEl.createSpan({ text: `${featureInfo.icon} ${featureInfo.name} ` });
+		titleEl.createEl('span', { text: '⭐ Pro', cls: 'manuscript-pro-badge-inline' });
 
 		// Description
 		contentEl.createEl('p', {
@@ -51,7 +42,7 @@ export class UpgradeModal extends Modal {
 			const benefitsSection = contentEl.createDiv({
 				cls: 'manuscript-upgrade-benefits',
 			});
-			benefitsSection.createEl('h3', { text: 'What you get:' });
+			benefitsSection.createEl('h3', { text: 'With Pro you get:' });
 
 			const benefitsList = benefitsSection.createEl('ul');
 			featureInfo.benefits.forEach((benefit) => {
@@ -59,13 +50,20 @@ export class UpgradeModal extends Modal {
 				li.createSpan({ text: '✓ ', cls: 'manuscript-check-mark' });
 				li.createSpan({ text: benefit });
 			});
+
+			// Add general Pro features benefit
+			const generalLi = benefitsList.createEl('li');
+			generalLi.createSpan({ text: '✓ ', cls: 'manuscript-check-mark' });
+			generalLi.createSpan({
+				text: 'Plus: Publisher exports (PDF, ePub, DOCX), Citation validation, Advanced statistics, and all future updates',
+			});
 		}
 
 		// Pricing section
 		const pricing = contentEl.createDiv({ cls: 'manuscript-upgrade-pricing' });
 
 		pricing.createEl('div', {
-			text: 'ManuScript Pro',
+			text: 'Unlock Everything',
 			cls: 'manuscript-upgrade-title',
 		});
 
@@ -78,12 +76,12 @@ export class UpgradeModal extends Modal {
 		});
 
 		pricing.createEl('div', {
-			text: 'One-time payment • Lifetime access',
+			text: 'One-time • Lifetime • All devices',
 			cls: 'manuscript-upgrade-subtitle',
 		});
 
 		pricing.createEl('div', {
-			text: 'Includes all Pro features + future updates',
+			text: 'Every Pro feature + all future updates included',
 			cls: 'manuscript-upgrade-note',
 		});
 

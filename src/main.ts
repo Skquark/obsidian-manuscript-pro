@@ -23,6 +23,9 @@ import { ManuscriptEditorModal } from './manuscript/ManuscriptEditorModal';
 import { PrePublicationPanel, VALIDATION_PANEL_VIEW_TYPE } from './validation/PrePublicationPanel';
 import { ExportManager } from './export/ExportManager';
 import { ExportDialog } from './export/ExportDialog';
+import { TemplateEditorModal } from './export/TemplateEditorModal';
+import { PresetGalleryModal } from './export/PresetGalleryModal';
+import { createDefaultTemplate } from './export/TemplateConfiguration';
 import { CitationImporter } from './citations/CitationImporter';
 import { DuplicateDetector } from './citations/DuplicateDetector';
 import { CitationSuggestionEngine } from './citations/CitationSuggestionEngine';
@@ -422,9 +425,8 @@ export default class ManuscriptProPlugin extends Plugin {
 					console.log(`Manuscript Pro: Adding pattern - ${pattern.description}`);
 				}
 
-				// Create regex with proper flags (g=global, m=multiline, d=indices)
-				const regex = createRegexWithFallback(pattern.regexString);
-				this.editorExtensions.push(concealViewPlugin(regex, this.settings, pattern.replacement));
+				// Use the pre-compiled regex from the pattern (already has proper flags including 'd' for indices)
+				this.editorExtensions.push(concealViewPlugin(pattern.regex, this.settings, pattern.replacement));
 			});
 		});
 
@@ -525,17 +527,17 @@ export default class ManuscriptProPlugin extends Plugin {
 			const icon = this.settings.enabled ? '👁️' : '👁️‍🗨️';
 			const enabledGroupsCount = Object.values(this.settings.groups).filter((v) => v).length;
 
-			this.statusBarItem.setText(`${icon} Manuscript Pro (${enabledGroupsCount}/5)`);
+			this.statusBarItem.setText(`${icon} ManuScript Pro (${enabledGroupsCount}/5)`);
 			this.statusBarItem.title =
 				this.settings.enabled ?
-					`Manuscript Pro: Active (${enabledGroupsCount} groups enabled)\nClick to toggle`
-				:	'Manuscript Pro: Inactive\nClick to toggle';
+					`ManuScript Pro: Active (${enabledGroupsCount} groups enabled)\nClick to toggle`
+				:	'ManuScript Pro: Inactive\nClick to toggle';
 		}
 	}
 
 	setupRibbon() {
 		if (this.settings.showRibbonIcon) {
-			this.ribbonIconEl = this.addRibbonIcon('scroll', 'Manuscript Pro', (evt: MouseEvent) => {
+			this.ribbonIconEl = this.addRibbonIcon('scroll', 'ManuScript Pro', (evt: MouseEvent) => {
 				// Create a comprehensive menu with organized sections
 				const menu = new Menu();
 
@@ -674,9 +676,16 @@ export default class ManuscriptProPlugin extends Plugin {
 
 						citMenu.addItem((subItem) => {
 							subItem
-								.setTitle('Detect Duplicate Citations')
+								.setTitle(`Detect Duplicate Citations${this.featureGate.getProIndicator()}`)
 								.setIcon('copy')
 								.onClick(async () => {
+									// Check Pro license (PRO feature)
+									if (
+										!this.featureGate.checkFeatureAccess('duplicate_detection' as any, 'Duplicate Citation Detection')
+									) {
+										return;
+									}
+
 									const allEntries = this.bibliographyManager.getAllCitations();
 									const threshold = this.settings.enhancedBib?.duplicateSimilarityThreshold || 0.8;
 									const duplicates = this.duplicateDetector.findDuplicates(allEntries, threshold);
@@ -823,7 +832,7 @@ export default class ManuscriptProPlugin extends Plugin {
 
 						msMenu.addItem((subItem) => {
 							subItem
-								.setTitle('Edit Manuscript Project')
+								.setTitle(`Edit Manuscript Project${this.featureGate.getProIndicator()}`)
 								.setIcon('edit')
 								.onClick(async () => {
 									await this.openManuscriptEditor();
@@ -1055,6 +1064,39 @@ export default class ManuscriptProPlugin extends Plugin {
 								});
 						});
 
+						templMenu.addSeparator();
+
+						// LaTeX Template Editor
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('LaTeX Template Editor')
+								.setIcon('file-edit')
+								.onClick(() => {
+									const config = createDefaultTemplate();
+									const modal = new TemplateEditorModal(this.app, this, config, (savedConfig: any) => {
+										new Notice('LaTeX template configured successfully');
+										console.log('Template configuration:', savedConfig);
+									});
+									modal.open();
+								});
+						});
+
+						templMenu.addItem((subItem) => {
+							subItem
+								.setTitle('Browse Template Presets')
+								.setIcon('layout-grid')
+								.onClick(() => {
+									const modal = new PresetGalleryModal(this.app, this, (config: any) => {
+										const editorModal = new TemplateEditorModal(this.app, this, config, (savedConfig: any) => {
+											new Notice('Template preset loaded successfully');
+											console.log('Template configuration:', savedConfig);
+										});
+										editorModal.open();
+									});
+									modal.open();
+								});
+						});
+
 						templMenu.showAtMouseEvent(evt);
 					});
 				});
@@ -1191,7 +1233,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Main toggle
 		this.addCommand({
 			id: 'toggle-concealer',
-			name: 'Toggle Manuscript Pro',
+			name: 'Toggle ManuScript Pro',
 			callback: () => {
 				this.toggleConcealer();
 			},
@@ -1629,6 +1671,20 @@ export default class ManuscriptProPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'open-latex-template-editor',
+			name: 'LaTeX Template Editor',
+			callback: () => {
+				const config = createDefaultTemplate();
+				const modal = new TemplateEditorModal(this.app, this, config, (savedConfig: any) => {
+					new Notice('LaTeX template configured successfully');
+					// Future: Save to export profile or template library
+					console.log('Template configuration:', savedConfig);
+				});
+				modal.open();
+			},
+		});
+
+		this.addCommand({
 			id: 'quick-export-pdf',
 			name: 'Quick Export to PDF',
 			checkCallback: (checking: boolean) => {
@@ -1688,6 +1744,15 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
+		// Quick Test Export command
+		this.addCommand({
+			id: 'quick-test-export',
+			name: 'Quick Test Export (First 3 Chapters)',
+			callback: async () => {
+				await this.exportManager.quickTestExport();
+			},
+		});
+
 		// Enhanced Bibliography Commands
 		this.addCommand({
 			id: 'import-citation',
@@ -1711,8 +1776,13 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'detect-duplicate-citations',
-			name: 'Detect Duplicate Citations',
+			name: `Detect Duplicate Citations${this.featureGate.getProIndicator()}`,
 			callback: async () => {
+				// Check Pro license (PRO feature)
+				if (!this.featureGate.checkFeatureAccess('duplicate_detection' as any, 'Duplicate Citation Detection')) {
+					return;
+				}
+
 				const allEntries = this.bibliographyManager.getAllCitations();
 				const threshold = this.settings.enhancedBib?.duplicateSimilarityThreshold || 0.8;
 
@@ -1911,7 +1981,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Phase 4A: Pre-Publication Checklist Commands (PRO)
 		this.addCommand({
 			id: 'show-publication-checklist',
-			name: 'Show Pre-Publication Checklist ⭐',
+			name: `Show Pre-Publication Checklist${this.featureGate.getProIndicator()}`,
 			callback: async () => {
 				// Check Pro license first
 				if (!this.featureGate.checkFeatureAccess('checklist_panel' as any, 'Pre-Publication Checklist')) {
@@ -1997,7 +2067,7 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'show-progress-stats',
-			name: 'Show Progress Statistics ⭐',
+			name: `Show Progress Statistics${this.featureGate.getProIndicator()}`,
 			callback: async () => {
 				// Check Pro license first
 				if (!this.featureGate.checkFeatureAccess('progress_panel' as any, 'Progress Statistics')) {
@@ -2017,7 +2087,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Phase 4A: Research Bible Commands (PRO)
 		this.addCommand({
 			id: 'add-research-fact',
-			name: 'Add Research Fact ⭐',
+			name: `Add Research Fact${this.featureGate.getProIndicator()}`,
 			callback: async () => {
 				// Check Pro license first
 				if (!this.featureGate.checkFeatureAccess('research_fact_modal' as any, 'Research Fact Entry')) {
@@ -2035,7 +2105,7 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'search-research-bible',
-			name: 'Search Research Bible ⭐',
+			name: `Search Research Bible${this.featureGate.getProIndicator()}`,
 			callback: async () => {
 				// Check Pro license first
 				if (!this.featureGate.checkFeatureAccess('research_search_modal' as any, 'Research Bible Search')) {
@@ -2178,7 +2248,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.settings.enabled = !this.settings.enabled;
 		this.saveSettings();
 		this.updateEditorExtension();
-		new Notice(`Manuscript Pro ${this.settings.enabled ? 'enabled' : 'disabled'}`);
+		new Notice(`ManuScript Pro ${this.settings.enabled ? 'enabled' : 'disabled'}`);
 	}
 
 	toggleGroup(groupKey: keyof typeof DEFAULT_SETTINGS.groups, groupName: string) {
@@ -2397,6 +2467,11 @@ export default class ManuscriptProPlugin extends Plugin {
 	}
 
 	async activateChecklistPanel() {
+		// Check Pro license first (PRO feature)
+		if (!this.featureGate.checkFeatureAccess('checklist_panel' as any, 'Pre-Publication Checklist Panel')) {
+			return;
+		}
+
 		const { workspace } = this.app;
 
 		let leaf: WorkspaceLeaf | null = null;
@@ -2430,6 +2505,11 @@ export default class ManuscriptProPlugin extends Plugin {
 	}
 
 	async activateProgressPanel() {
+		// Check Pro license first (PRO feature)
+		if (!this.featureGate.checkFeatureAccess('progress_panel' as any, 'Progress Statistics Panel')) {
+			return;
+		}
+
 		const { workspace } = this.app;
 
 		let leaf: WorkspaceLeaf | null = null;

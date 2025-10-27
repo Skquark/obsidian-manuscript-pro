@@ -1,26 +1,24 @@
-# Manuscript Pro
+# ManuScript Pro
 
 **LaTeX & Pandoc Academic Writing & Publishing Toolkit**
 
-Transform Obsidian into a professional academic writing environment. Manuscript Pro provides everything you need to write, organize, and publish academic papers, theses, books, and technical documentation—all within your favorite knowledge base.
-
-**Based on**: [Dynamic Text Concealer](https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer) by Matt Cole Anderson
+Transform Obsidian into a professional academic writing environment. ManuScript Pro provides everything you need to write, organize, and publish academic papers, theses, books, and technical documentation—all within your favorite knowledge base.
 
 [![Version](https://img.shields.io/github/v/release/Skquark/obsidian-manuscript-pro)](https://github.com/Skquark/obsidian-manuscript-pro/releases)
 [![License](https://img.shields.io/github/license/Skquark/obsidian-manuscript-pro)](LICENSE)
 
 ---
 
-## 📖 What is Manuscript Pro?
+## 📖 What is ManuScript Pro?
 
-Manuscript Pro bridges the gap between Obsidian's powerful note-taking capabilities and professional academic publishing requirements. If you're writing anything that needs citations, equations, cross-references, or professional formatting—research papers, PhD theses, technical manuals, academic books—this plugin is for you.
+ManuScript Pro bridges the gap between Obsidian's powerful note-taking capabilities and professional academic publishing requirements. If you're writing anything that needs citations, equations, cross-references, or professional formatting—research papers, PhD theses, technical manuals, academic books—this plugin is for you.
 
 ### Quick Start
 
 - Install Pandoc and ensure it’s on your PATH (pandoc.org).
-- Enable Manuscript Pro in Obsidian. In settings, turn on “Enable in Live Preview”.
+- Enable ManuScript Pro in Obsidian. In settings, turn on “Enable in Live Preview”.
 - Optional: Set a global default CSL in Settings → Export → “Default CSL Style”.
-- Try an export via the command palette: “Manuscript Pro: Export Current File”.
+- Try an export via the command palette: “ManuScript Pro: Export Current File”.
 - Use Focus Mode (Mod+Shift+Z) to write distraction‑free. The status bar indicates focus state; Ctrl+Click cycles zone.
 
 ### The Problem It Solves
@@ -53,7 +51,7 @@ $$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$
 
 ### The Solution
 
-Manuscript Pro makes your academic writing clean, readable, and enjoyable:
+ManuScript Pro makes your academic writing clean, readable, and enjoyable:
 
 ```markdown
 The mass-energy equivalence E = mc² was derived by 
@@ -81,7 +79,7 @@ Plus it gives you:
 
 **Hide the noise, see your content.**
 
-Manuscript Pro conceals LaTeX and Pandoc markup in Live Preview mode, making your documents readable while you write. Syntax automatically reveals when your cursor is on that line, so editing is seamless.
+ManuScript Pro conceals LaTeX and Pandoc markup in Live Preview mode, making your documents readable while you write. Syntax automatically reveals when your cursor is on that line, so editing is seamless.
 
 #### What Gets Concealed
 
@@ -150,7 +148,7 @@ Full BibTeX integration with modern enhancements that make citation management a
 
 **Citation Styles**
 
-Manuscript Pro supports citation formatting in two modes:
+ManuScript Pro supports citation formatting in two modes:
 
 **Built-in Preview Styles** (for hover tooltips in Live Preview):
 - APA (7th edition)
@@ -193,7 +191,7 @@ PubMed ID: 12345678
 → Medical/biological literature
 ```
 
-**Command**: "Manuscript Pro: Import Citation"
+**Command**: "ManuScript Pro: Import Citation"
 
 **🔍 Duplicate Detection**
 
@@ -203,7 +201,7 @@ Find and merge duplicate bibliography entries:
 - Smart suggestions for which version to keep
 - Automatic bibliography cleanup
 
-**Command**: "Manuscript Pro: Find Duplicate Citations"
+**Command**: "ManuScript Pro: Find Duplicate Citations"
 
 **🧠 Smart Citation Suggestions**
 
@@ -818,7 +816,7 @@ Statistics: Basic word count
 
 1. Open Obsidian Settings
 2. Go to **Community Plugins** and disable Safe Mode
-3. Click **Browse** and search for "Manuscript Pro"
+3. Click **Browse** and search for "ManuScript Pro"
 4. Click **Install** and then **Enable**
 
 ### Manual Installation
@@ -832,7 +830,7 @@ Statistics: Basic word count
 
 ## 🔒 Security & Networking
 
-Manuscript Pro takes security seriously. Here's what you should know:
+ManuScript Pro takes security seriously. Here's what you should know:
 
 ### Safe Command Execution
 
@@ -850,7 +848,7 @@ exec(`pandoc -f markdown -t pdf ${input}`)
 
 ### Network Requests
 
-Manuscript Pro makes **optional** network requests only when you explicitly use citation import features:
+ManuScript Pro makes **optional** network requests only when you explicitly use citation import features:
 
 | Service | Endpoint | Purpose | Data Sent |
 |---------|----------|---------|-----------|
@@ -862,7 +860,7 @@ Manuscript Pro makes **optional** network requests only when you explicitly use 
 
 **CrossRef Polite Pool**: You can optionally add your email in settings (`Citations → CrossRef Email`). This gives you access to CrossRef's "polite" rate limits (50 req/s vs 5 req/s). Your email is only sent to CrossRef and only in the User-Agent header.
 
-**No Tracking**: Manuscript Pro never sends:
+**No Tracking**: ManuScript Pro never sends:
 - Your vault contents
 - File names or paths
 - Usage analytics
@@ -870,7 +868,7 @@ Manuscript Pro makes **optional** network requests only when you explicitly use 
 
 ### File System Access
 
-Manuscript Pro operates entirely within your Obsidian vault:
+ManuScript Pro operates entirely within your Obsidian vault:
 - **Read**: Reads `.md`, `.bib`, `.csl`, `.json` files in your vault
 - **Write**: Writes export outputs to configured directories (default: `exports/`)
 - **Index**: Builds in-memory indexes of labels and citations for quick access
@@ -888,7 +886,7 @@ All dependencies are audited and pinned to specific versions. See `package.json`
 
 **100% Local**: All processing happens on your machine. Your writing never leaves your device unless you explicitly export or sync via your chosen method (Git, cloud storage, etc.).
 
-**No Telemetry**: Manuscript Pro collects zero usage statistics or crash reports.
+**No Telemetry**: ManuScript Pro collects zero usage statistics or crash reports.
 
 
 ## 🚀 Quick Start Guide
@@ -910,7 +908,7 @@ All major features are organized in an easy-to-access ribbon menu:
 
 **Command Palette** (Ctrl/Cmd + P)
 
-All features are also available via the command palette by searching for "Manuscript Pro".
+All features are also available via the command palette by searching for "ManuScript Pro".
 
 **Status Bar**
 
@@ -923,7 +921,7 @@ All features are also available via the command palette by searching for "Manusc
 **Step 1: Set Up Bibliography**
 ```
 1. Create or copy your references.bib file into your vault
-2. Open Manuscript Pro settings → Citations
+2. Open ManuScript Pro settings → Citations
 3. Set bibliography file path to "references.bib"
 4. Choose citation style (e.g., APA)
 ```
@@ -953,7 +951,7 @@ bibliography: references.bib
 **Step 4: Export**
 ```
 1. Open Command Palette
-2. Run "Manuscript Pro: Export Document"
+2. Run "ManuScript Pro: Export Document"
 3. Choose "PDF - Academic"
 4. Select output location
 5. Done!
@@ -1018,7 +1016,7 @@ Chapter 3: 8000 words
 
 ### Essential Settings
 
-**Pattern Groups** (Settings → Manuscript Pro → Pattern Groups)
+**Pattern Groups** (Settings → ManuScript Pro → Pattern Groups)
 ```
 ☑ Math Delimiters - Hide $ and $$
 ☑ Citations - Clean [@author] syntax  
@@ -1027,7 +1025,7 @@ Chapter 3: 8000 words
 ☑ Indexing & Metadata - Hide \index, comments
 ```
 
-**Citations** (Settings → Manuscript Pro → Citations)
+**Citations** (Settings → ManuScript Pro → Citations)
 ```
 Bibliography File: references.bib
 Citation Style: APA
@@ -1035,7 +1033,7 @@ Enable Auto-Completion: ✓
 Show Hover Previews: ✓
 ```
 
-**Export** (Settings → Manuscript Pro → Export)
+**Export** (Settings → ManuScript Pro → Export)
 ```
 Pandoc Path: (auto-detected)
 Default Output Directory: exports/
@@ -1043,7 +1041,7 @@ Default Profile: PDF - Academic
 Open After Export: ✓
 ```
 
-**Statistics** (Settings → Manuscript Pro → Statistics)
+**Statistics** (Settings → ManuScript Pro → Statistics)
 ```
 Show in Sidebar: ✓
 Show in Status Bar: ✓
@@ -1351,7 +1349,7 @@ Vote on features or suggest new ones in [GitHub Discussions](https://github.com/
 
 **Daily Writing Ritual**
 ```
-1. Open Manuscript Pro statistics panel
+1. Open ManuScript Pro statistics panel
 2. Set session goal (e.g., 500 words)
 3. Enable Focus Mode (Ctrl/Cmd + Shift + F)
 4. Write until goal met
@@ -1468,7 +1466,7 @@ A: The plugin handles thousands of entries efficiently. Use duplicate detection 
   1. Download and install Pandoc from https://pandoc.org
   2. Restart Obsidian completely (not just reload)
   3. Open terminal and verify: `pandoc --version`
-  4. If still not working, manually set Pandoc path in Settings → Manuscript Pro → Export
+  4. If still not working, manually set Pandoc path in Settings → ManuScript Pro → Export
 
 **PDF export fails with "pdflatex not found"**
 - **Cause**: LaTeX distribution not installed
@@ -1509,10 +1507,10 @@ A: The plugin handles thousands of entries efficiently. Use duplicate detection 
 
 **Syntax not concealing in Live Preview**
 - **Check**:
-  1. Settings → Manuscript Pro → "Enable in Live Preview" is ON
+  1. Settings → ManuScript Pro → "Enable in Live Preview" is ON
   2. Current view mode is Live Preview (not Source Mode or Reading Mode)
   3. Specific syntax group is enabled (Math Delimiters, Citations, etc.)
-- **Try**: Toggle Manuscript Pro off and on (Ctrl+P → "Toggle Manuscript Pro")
+- **Try**: Toggle ManuScript Pro off and on (Ctrl+P → "Toggle ManuScript Pro")
 
 **Concealment reveals when not expected**
 - **Note**: Cursor proximity reveals syntax - this is intentional for editing
@@ -1573,7 +1571,7 @@ A: The plugin handles thousands of entries efficiently. Use duplicate detection 
 If you encounter issues not covered here:
 
 1. **Check Documentation**: Review EXPORT-TESTING-GUIDE.md for detailed export testing
-2. **Enable Debug Mode**: Settings → Manuscript Pro → Enable "Verbose Logging"
+2. **Enable Debug Mode**: Settings → ManuScript Pro → Enable "Verbose Logging"
 3. **Check Console**: Open Developer Console (Ctrl+Shift+I) for error messages
 4. **GitHub Issues**: https://github.com/Skquark/obsidian-manuscript-pro/issues
    - Search existing issues first
@@ -1581,7 +1579,13 @@ If you encounter issues not covered here:
 
 ---
 
-**Manuscript Pro** - *Write better. Publish faster.*
+## Credits
+
+The syntax concealment feature was inspired by [Dynamic Text Concealer](https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer) by Matt Cole Anderson.
+
+---
+
+**ManuScript Pro** - *Write better. Publish faster.*
 
 Transform your academic writing workflow today.
 - Authoring Tools (LaTeX & Pandoc)

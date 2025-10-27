@@ -16,10 +16,15 @@ export class FeatureGate {
 	 * Check if user has access to a Pro feature (simple boolean)
 	 */
 	hasProFeature(feature: ProFeature): boolean {
-		return (
-			this.plugin.licenseManager.hasProLicense() &&
-			this.plugin.licenseManager.isLicenseValid()
-		);
+		return this.plugin.licenseManager.hasProLicense() && this.plugin.licenseManager.isLicenseValid();
+	}
+
+	/**
+	 * Get Pro indicator string - shows ⭐ for free users, empty for Pro users
+	 * Use this for menu items, command names, etc.
+	 */
+	getProIndicator(): string {
+		return this.plugin.licenseManager.hasProLicense() && this.plugin.licenseManager.isLicenseValid() ? '' : ' ⭐';
 	}
 
 	/**
@@ -59,9 +64,10 @@ export class FeatureGate {
 			}
 		};
 
-		// Add Pro badge to command name
-		if (!command.name.includes('(Pro)')) {
-			command.name = `${command.name} ⭐`;
+		// Add Pro badge to command name (only for free users)
+		const proIndicator = this.getProIndicator();
+		if (proIndicator && !command.name.includes(proIndicator.trim())) {
+			command.name = `${command.name}${proIndicator}`;
 		}
 
 		this.plugin.addCommand(command);
@@ -166,8 +172,7 @@ export class FeatureGate {
 				feature: ProFeature.PROGRESS_TRACKING,
 				name: 'Progress Tracking',
 				icon: '🎯',
-				description:
-					'Set writing goals, track sessions, monitor streaks, and view detailed progress over time.',
+				description: 'Set writing goals, track sessions, monitor streaks, and view detailed progress over time.',
 				benefits: [
 					'Custom writing goals',
 					'Automatic session tracking',
@@ -196,8 +201,7 @@ export class FeatureGate {
 				feature: ProFeature.ADVANCED_EXPORT,
 				name: 'Advanced Export',
 				icon: '💾',
-				description:
-					'Publisher-ready export with custom pipelines, presets, and batch processing capabilities.',
+				description: 'Publisher-ready export with custom pipelines, presets, and batch processing capabilities.',
 				benefits: [
 					'20+ publisher-specific presets',
 					'Custom export pipelines',
@@ -211,8 +215,7 @@ export class FeatureGate {
 				feature: ProFeature.PREMIUM_TEMPLATES,
 				name: 'Premium Templates',
 				icon: '📋',
-				description:
-					'Access 15+ publisher-specific templates with advanced variable support and customization.',
+				description: 'Access 15+ publisher-specific templates with advanced variable support and customization.',
 				benefits: [
 					'15+ professional templates',
 					'Publisher-specific formatting',
@@ -226,8 +229,7 @@ export class FeatureGate {
 				feature: ProFeature.PUBLISHER_PRESETS,
 				name: 'Publisher Presets',
 				icon: '🏢',
-				description:
-					'Export presets configured for specific publishers and academic journals.',
+				description: 'Export presets configured for specific publishers and academic journals.',
 				benefits: [
 					'Major publisher formats (Springer, Elsevier, etc.)',
 					'Academic journal styles',
@@ -243,67 +245,67 @@ export class FeatureGate {
 				ProFeature.RESEARCH_PANEL,
 				'Research Bible Panel',
 				'🗂️',
-				'Dedicated panel for browsing and managing your Research Bible.'
+				'Dedicated panel for browsing and managing your Research Bible.',
 			),
 			[ProFeature.RESEARCH_BULK_OPERATIONS]: this.createBasicFeatureInfo(
 				ProFeature.RESEARCH_BULK_OPERATIONS,
 				'Research Bulk Operations',
 				'⚡',
-				'Bulk import, export, and management of research entries.'
+				'Bulk import, export, and management of research entries.',
 			),
 			[ProFeature.CUSTOM_CITATION_STYLES]: this.createBasicFeatureInfo(
 				ProFeature.CUSTOM_CITATION_STYLES,
 				'Custom Citation Styles',
 				'🎨',
-				'Create and save unlimited custom citation styles.'
+				'Create and save unlimited custom citation styles.',
 			),
 			[ProFeature.DUPLICATE_DETECTION]: this.createBasicFeatureInfo(
 				ProFeature.DUPLICATE_DETECTION,
 				'Duplicate Detection',
 				'🔎',
-				'Automatically detect duplicate citations and entries.'
+				'Automatically detect duplicate citations and entries.',
 			),
 			[ProFeature.PUBLISHER_ADDRESS]: this.createBasicFeatureInfo(
 				ProFeature.PUBLISHER_ADDRESS,
 				'Publisher Addresses',
 				'📍',
-				'Include publisher location in citations (Chicago style).'
+				'Include publisher location in citations (Chicago style).',
 			),
 			[ProFeature.INLINE_EQUATIONS]: this.createBasicFeatureInfo(
 				ProFeature.INLINE_EQUATIONS,
 				'Inline Equation Counting',
 				'➕',
-				'Count inline equations in manuscript statistics.'
+				'Count inline equations in manuscript statistics.',
 			),
 			[ProFeature.STATS_EXPORT]: this.createBasicFeatureInfo(
 				ProFeature.STATS_EXPORT,
 				'Statistics Export',
 				'📤',
-				'Export statistics and progress data to CSV.'
+				'Export statistics and progress data to CSV.',
 			),
 			[ProFeature.MANUSCRIPT_VALIDATION]: this.createBasicFeatureInfo(
 				ProFeature.MANUSCRIPT_VALIDATION,
 				'Manuscript Validation',
 				'✓',
-				'Validate manuscript metadata before export.'
+				'Validate manuscript metadata before export.',
 			),
 			[ProFeature.EDITION_COMPARISON]: this.createBasicFeatureInfo(
 				ProFeature.EDITION_COMPARISON,
 				'Edition Comparison',
 				'🔄',
-				'Compare different editions of your manuscript.'
+				'Compare different editions of your manuscript.',
 			),
 			[ProFeature.BATCH_EXPORT]: this.createBasicFeatureInfo(
 				ProFeature.BATCH_EXPORT,
 				'Batch Export',
 				'📦',
-				'Export multiple formats simultaneously.'
+				'Export multiple formats simultaneously.',
 			),
 			[ProFeature.CUSTOM_VARIABLES]: this.createBasicFeatureInfo(
 				ProFeature.CUSTOM_VARIABLES,
 				'Custom Template Variables',
 				'🔧',
-				'Advanced custom variables in templates.'
+				'Advanced custom variables in templates.',
 			),
 		};
 
@@ -313,12 +315,7 @@ export class FeatureGate {
 	/**
 	 * Helper to create basic feature info
 	 */
-	private createBasicFeatureInfo(
-		feature: ProFeature,
-		name: string,
-		icon: string,
-		description: string
-	): FeatureInfo {
+	private createBasicFeatureInfo(feature: ProFeature, name: string, icon: string, description: string): FeatureInfo {
 		return {
 			feature,
 			name,

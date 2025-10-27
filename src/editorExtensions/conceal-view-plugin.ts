@@ -40,25 +40,38 @@ class ConcealViewPlugin implements PluginValue {
 	matchDecorator: MatchDecorator;
 	settings: PluginSettings;
 	replacement: string;
-	cursorLineFrom = -1;
-	cursorLineTo = -1;
-	lastCursorPos = -1;
+	cursorLineFrom: number = -1;
+	cursorLineTo: number = -1;
+	lastCursorPos: number = -1;
+	hasInteracted: boolean = false;
 
-	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings, replacement = '') {
+	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings, replacement: string = '') {
 		this.settings = settings;
 		this.replacement = replacement;
 		this.matchDecorator = new ConcealMatchDecorator({
 			regexp: regexp,
 			decorate: (add, from, to, match, view): void => {
 				// Define conditions where a decorator should not be added for a match
-				if (this.isCodeblock(view, from, to)) return;
+				if (this.isCodeblock(view, from, to)) {
+					return;
+				}
 
 				// Cursor-aware revealing: skip decoration if cursor is on this line
 				if (this.settings.cursorReveal.enabled && this.isCursorOnLine(view, from, to)) {
 					return;
 				}
 
-				if (this.selectionAndRangeOverlap(view.state.selection, from, to)) return;
+				// Check if cursor is directly within the match range (clicking on indicator)
+				// OR if there's a selection that overlaps
+				// Only check cursorInMatch if user has interacted (not initial file load)
+				const selection = view.state.selection.main;
+				const cursorInMatch =
+					this.hasInteracted && selection.from === selection.to && selection.from >= from && selection.from <= to;
+				const hasSelectionOverlap = this.selectionAndRangeOverlap(view.state.selection, from, to);
+
+				if (cursorInMatch || hasSelectionOverlap) {
+					return;
+				}
 
 				// Add mark decorator for each capture group in regex
 				for (let i = 1; i < match.length; i++) {
@@ -197,7 +210,12 @@ class ConcealViewPlugin implements PluginValue {
 	 */
 	private selectionAndRangeOverlap(selection: EditorSelection, rangeFrom: number, rangeTo: number): boolean {
 		for (const range of selection.ranges) {
-			if (range.from <= rangeTo && range.to >= rangeFrom) {
+			// Only consider it an overlap if there's an actual selection (not just a cursor)
+			// A cursor position has range.from === range.to
+			const hasSelection = range.from !== range.to;
+
+			// If there's a selection and it overlaps, return true
+			if (hasSelection && range.from <= rangeTo && range.to >= rangeFrom) {
 				return true;
 			}
 		}
@@ -216,6 +234,11 @@ class ConcealViewPlugin implements PluginValue {
 			return;
 		}
 
+		// Mark as interacted when user makes a selection or moves cursor
+		if (update.selectionSet) {
+			this.hasInteracted = true;
+		}
+
 		// Track cursor position changes for revealing
 		const selection = update.state.selection.main;
 		const cursorPos = selection.head;
@@ -229,6 +252,13 @@ class ConcealViewPlugin implements PluginValue {
 			this.cursorLineTo = cursorLine.to;
 			this.lastCursorPos = cursorPos;
 			// Force redecorating when cursor moves
+			this.decorations = this.matchDecorator.createDeco(update.view);
+			return;
+		}
+
+		// Also re-decorate on selection changes even when cursorReveal is disabled
+		// This handles click-on-indicator revealing
+		if (!this.settings.cursorReveal.enabled && update.selectionSet) {
 			this.decorations = this.matchDecorator.createDeco(update.view);
 			return;
 		}
@@ -254,7 +284,7 @@ const pluginSpec: PluginSpec<ConcealViewPlugin> = {
 /**
  * concealViewPlugin creates a ViewPlugin to be registered as an editorExtension
  */
-export const concealViewPlugin = (regexp: RegExp, settings: PluginSettings, replacement = '') => {
+export const concealViewPlugin = (regexp: RegExp, settings: PluginSettings, replacement: string = '') => {
 	return ViewPlugin.define((view) => new ConcealViewPlugin(view, regexp, settings, replacement), pluginSpec);
 };
 

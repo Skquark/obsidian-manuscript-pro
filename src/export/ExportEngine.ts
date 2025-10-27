@@ -16,6 +16,10 @@ import { promisify } from 'util';
 import * as path from 'path';
 import type LatexPandocConcealerPlugin from '../main';
 import type { ExportProfile, ExportTask, ExportResult, ManuscriptMetadata } from './ExportInterfaces';
+import { getTrimSizeById, estimatePageCount, buildGeometry } from './TrimSizePresets';
+import { YAMLGenerator } from './YAMLGenerator';
+import { LaTeXGenerator } from './LaTeXGenerator';
+import type { TemplateConfiguration } from './TemplateConfiguration';
 
 const execFileAsync = promisify(execFile);
 
@@ -144,6 +148,16 @@ export class ExportEngine {
 			profile.lastUsed = Date.now();
 			await this.plugin.saveSettings();
 
+			// Post-process PDF (compression, optimization)
+			if (profile.format === 'pdf' && profile.postProcessing?.compression) {
+				await this.postProcessPdf(finalOutputPath, profile.postProcessing);
+			}
+
+			// Validate EPUB after generation
+			if (profile.format === 'epub' && profile.validateEpub) {
+				await this.validateEpub(finalOutputPath);
+			}
+
 			const duration = Date.now() - startTime;
 
 			return {
@@ -163,6 +177,97 @@ export class ExportEngine {
 				error: task.error,
 				pandocOutput: error.stdout || error.stderr || undefined,
 			};
+		}
+	}
+
+	/**
+	 * Post-process PDF with compression and optimization
+	 */
+	private async postProcessPdf(pdfPath: string, options: any): Promise<void> {
+		const compression = options.compression;
+		if (!compression || compression.level === 'none') {
+			return;
+		}
+
+		try {
+			const { PdfCompressor } = await import('./PdfCompressor');
+			const compressor = new PdfCompressor(this.plugin);
+
+			// Check if Ghostscript is available
+			const gsAvailable = await compressor.checkGhostscriptAvailable();
+			if (!gsAvailable) {
+				// Show installation modal
+				const { GhostscriptInstallModal } = await import('./GhostscriptInstallModal');
+				new GhostscriptInstallModal(this.plugin.app).open();
+				return;
+			}
+
+			// Create temporary output path
+			const fs = require('fs');
+			const path = require('path');
+			const tempPath = `${pdfPath}.compressed.pdf`;
+
+			// Compress PDF
+			const result = await compressor.compress(pdfPath, tempPath, compression);
+
+			if (result.success && fs.existsSync(tempPath)) {
+				// Replace original with compressed version
+				fs.unlinkSync(pdfPath);
+				fs.renameSync(tempPath, pdfPath);
+
+				// Show compression results
+				const formatBytes = (bytes: number) => {
+					if (bytes === 0) return '0 B';
+					const k = 1024;
+					const sizes = ['B', 'KB', 'MB', 'GB'];
+					const i = Math.floor(Math.log(bytes) / Math.log(k));
+					return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+				};
+
+				new Notice(
+					`PDF compressed: ${formatBytes(result.originalSize)} → ${formatBytes(result.compressedSize)} (${result.reduction}% reduction)`,
+					5000,
+				);
+
+				if (this.plugin.settings.export?.verboseLogging) {
+					console.log(`PDF compression: ${result.reduction}% reduction (${compression.level} level)`);
+				}
+			} else {
+				console.warn('PDF compression failed:', result.error);
+			}
+		} catch (error) {
+			console.error('PDF post-processing error:', error);
+		}
+	}
+
+	/**
+	 * Validate EPUB file after generation
+	 */
+	private async validateEpub(epubPath: string): Promise<void> {
+		try {
+			const { EpubValidator } = await import('./EpubValidator');
+			const { ValidationResultModal } = await import('./ValidationResultModal');
+
+			const validator = new EpubValidator(this.plugin);
+
+			// Check if EPUBCheck is available
+			const epubCheckAvailable = await validator.checkEpubCheckAvailable();
+			if (!epubCheckAvailable) {
+				// Show installation modal
+				const { EpubCheckInstallModal } = await import('./EpubCheckInstallModal');
+				new EpubCheckInstallModal(this.plugin.app).open();
+				return;
+			}
+
+			// Run validation
+			new Notice('Validating EPUB file...');
+			const result = await validator.validate(epubPath);
+
+			// Show results modal
+			new ValidationResultModal(this.plugin.app, result, epubPath).open();
+		} catch (error) {
+			console.error('EPUB validation error:', error);
+			new Notice('EPUB validation failed. See console for details.');
 		}
 	}
 
@@ -250,10 +355,39 @@ export class ExportEngine {
 		}
 
 		// Variables
-		if (options.variables) {
-			for (const [key, value] of Object.entries(options.variables)) {
-				args.push('-V', `${key}=${value}`);
+		const allVariables = { ...options.variables };
+
+		// Apply trim size geometry if specified (for PDF books)
+		if (profile.format === 'pdf' && profile.trimSize) {
+			const trimSize = getTrimSizeById(profile.trimSize);
+			if (trimSize) {
+				// Estimate page count from input files
+				let totalText = '';
+				for (const inputFile of inputFiles) {
+					try {
+						const fs = require('fs');
+						const content = fs.readFileSync(inputFile, 'utf-8');
+						totalText += content;
+					} catch (error) {
+						// If we can't read files, use default page count
+						console.warn('Could not read file for page count estimation:', inputFile);
+					}
+				}
+
+				const pageCount = totalText ? estimatePageCount(totalText, trimSize) : 300;
+				const geometry = buildGeometry(trimSize, pageCount);
+
+				// Override geometry variable
+				allVariables.geometry = geometry;
+
+				if (this.plugin.settings.export?.verboseLogging) {
+					console.log(`Trim size ${trimSize.name}: estimated ${pageCount} pages, geometry: ${geometry}`);
+				}
 			}
+		}
+
+		for (const [key, value] of Object.entries(allVariables)) {
+			args.push('-V', `${key}=${value}`);
 		}
 
 		// Metadata
@@ -267,6 +401,14 @@ export class ExportEngine {
 			if (metadata.keywords) allMetadata.keywords = metadata.keywords.join(', ');
 		}
 
+		// Add LaTeX preamble for custom commands if exporting to PDF
+		if (profile.format === 'pdf') {
+			const latexPreamble = this.buildLaTeXPreamble();
+			if (latexPreamble) {
+				allMetadata['header-includes'] = latexPreamble;
+			}
+		}
+
 		for (const [key, value] of Object.entries(allMetadata)) {
 			args.push('-M', `${key}=${JSON.stringify(value)}`);
 		}
@@ -276,7 +418,12 @@ export class ExportEngine {
 			args.push('--template', profile.template);
 		}
 
-		// Template variables
+		// Template configuration (new system)
+		if (profile.templateConfig) {
+			await this.applyTemplateConfiguration(profile.templateConfig, args, allMetadata, metadata);
+		}
+
+		// Template variables (legacy system)
 		if (profile.templateVariables) {
 			for (const [key, value] of Object.entries(profile.templateVariables)) {
 				args.push('-V', `${key}=${value}`);
@@ -301,6 +448,60 @@ export class ExportEngine {
 		}
 
 		return args;
+	}
+
+	/**
+	 * Build LaTeX preamble with custom command definitions
+	 * Returns an array of lines for proper YAML formatting
+	 */
+	private buildLaTeXPreamble(): string[] {
+		return [
+			'\\usepackage{graphicx}',
+			'\\usepackage{eso-pic}',
+			'\\newcommand{\\setchapterimage}[2]{\\AddToShipoutPictureBG*{\\AtPageUpperLeft{\\raisebox{-\\height}{\\includegraphics[width=#2]{#1}}}}}',
+		];
+	}
+
+	/**
+	 * Apply template configuration to Pandoc arguments
+	 */
+	private async applyTemplateConfiguration(
+		templateConfigId: string,
+		args: string[],
+		metadata: Record<string, any>,
+		manuscriptMetadata?: ManuscriptMetadata,
+	): Promise<void> {
+		// Load template configuration
+		// In the future, this will load from a template store/manager
+		// For now, we'll create a placeholder that can be expanded
+
+		// TODO: Load actual template configuration from storage
+		// const config = await this.loadTemplateConfig(templateConfigId);
+
+		// For now, just log that template system is available
+		if (this.plugin.settings.export?.verboseLogging) {
+			console.log('Template configuration system available, ID:', templateConfigId);
+		}
+
+		// When template configurations are loaded, they will:
+		// 1. Generate YAML frontmatter via YAMLGenerator
+		// 2. Generate LaTeX header-includes via LaTeXGenerator
+		// 3. Apply to args and metadata
+
+		// Example implementation (will be activated when template storage is ready):
+		/*
+		const yamlGen = new YAMLGenerator();
+		const latexGen = new LaTeXGenerator();
+
+		// Generate YAML and write to temporary file
+		const yaml = yamlGen.generate(config, manuscriptMetadata);
+		const yamlPath = await this.writeTempYAMLFile(yaml);
+		args.push('--metadata-file', yamlPath);
+
+		// Generate LaTeX header-includes
+		const latex = latexGen.generate(config);
+		metadata['header-includes'] = latex.split('\n');
+		*/
 	}
 
 	/**

@@ -5,13 +5,26 @@
 
 import { App, Modal, Setting, TFile, Notice } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
-import type { ExportProfile } from './ExportInterfaces';
+import type {
+	ExportProfile,
+	ExportFormat,
+	ExportProfileVariant,
+	CompressionLevel,
+	CompressionSettings,
+} from './ExportInterfaces';
+import { TRIM_SIZE_PRESETS, getTrimSizeById, estimatePageCount, countWords } from './TrimSizePresets';
+import { PROFILE_VARIANTS } from './ExportInterfaces';
 
 export class ExportDialog extends Modal {
 	private selectedProfile: ExportProfile;
 	private selectedFiles: TFile[];
 	private outputPath = '';
 	private cslOverride = '';
+	private selectedTrimSize?: string;
+	private selectedVariant?: ExportProfileVariant;
+	private batchExportFormats: Set<ExportFormat> = new Set();
+	private compressionSettings?: CompressionSettings;
+	private validateEpub: boolean = false;
 	private onExport: (profile: ExportProfile, files: TFile[], outputPath?: string) => Promise<void>;
 
 	// Lightweight CSL metadata extraction (title/id) without XML deps
@@ -104,6 +117,210 @@ export class ExportDialog extends Modal {
 		// Profile details
 		const profileDetails = contentEl.createDiv({ cls: 'export-profile-details' });
 		this.renderProfileDetails(profileDetails);
+
+		// Trim Size Selection (for PDF books)
+		if (this.selectedProfile.format === 'pdf') {
+			const trimSizeContainer = contentEl.createDiv({ cls: 'export-trim-size-section' });
+
+			new Setting(trimSizeContainer)
+				.setName('Trim Size')
+				.setDesc('Industry-standard book sizes with automatic margin calculation')
+				.addDropdown((dropdown) => {
+					dropdown.addOption('', 'Default (from profile)');
+					for (const trimSize of TRIM_SIZE_PRESETS) {
+						dropdown.addOption(trimSize.id, trimSize.name);
+					}
+					dropdown.setValue(this.selectedTrimSize || '');
+					dropdown.onChange((value) => {
+						this.selectedTrimSize = value || undefined;
+						this.updateTrimSizeInfo();
+					});
+				});
+
+			// Trim size info display
+			const trimSizeInfo = trimSizeContainer.createDiv({ cls: 'export-trim-size-info' });
+			this.renderTrimSizeInfo(trimSizeInfo);
+		}
+
+		// Profile Variant Selection (test/sample/full builds)
+		const variantContainer = contentEl.createDiv({ cls: 'export-variant-section' });
+
+		new Setting(variantContainer)
+			.setName('Build Variant')
+			.setDesc('Quick test builds or full manuscript')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Full Manuscript (All Chapters)');
+				for (const variant of PROFILE_VARIANTS) {
+					if (variant.id !== 'full') {
+						dropdown.addOption(variant.id, variant.name);
+					}
+				}
+				dropdown.setValue(this.selectedVariant?.id || '');
+				dropdown.onChange((value) => {
+					if (value) {
+						this.selectedVariant = PROFILE_VARIANTS.find((v) => v.id === value);
+					} else {
+						this.selectedVariant = undefined;
+					}
+					this.updateVariantInfo();
+				});
+			});
+
+		// Variant info display
+		const variantInfo = variantContainer.createDiv({ cls: 'export-variant-info' });
+		this.renderVariantInfo(variantInfo);
+
+		// PDF Compression Options (for PDF exports)
+		if (this.selectedProfile.format === 'pdf' || this.batchExportFormats.has('pdf')) {
+			const compressionContainer = contentEl.createDiv({ cls: 'export-compression-section' });
+			compressionContainer.createEl('h3', { text: 'PDF Compression' });
+
+			const compressionDesc = compressionContainer.createDiv({ cls: 'setting-item-description' });
+			compressionDesc.style.marginBottom = '1rem';
+			compressionDesc.textContent = 'Compress PDF for different distribution channels (requires Ghostscript)';
+
+			// Compression level
+			new Setting(compressionContainer)
+				.setName('Compression Level')
+				.setDesc('Choose quality level based on distribution channel')
+				.addDropdown((dropdown) => {
+					dropdown.addOption('none', 'None (fastest, largest file)');
+					dropdown.addOption('screen', 'Screen (~72 DPI, smallest file)');
+					dropdown.addOption('ebook', 'Ebook (~150 DPI, good for web/email)');
+					dropdown.addOption('printer', 'Printer (~300 DPI, print-on-demand)');
+					dropdown.addOption('prepress', 'Prepress (maximum quality, offset printing)');
+
+					const defaultLevel: CompressionLevel = 'ebook';
+					dropdown.setValue(defaultLevel);
+
+					dropdown.onChange((value) => {
+						const level = value as CompressionLevel;
+						if (!this.compressionSettings) {
+							this.compressionSettings = {
+								level: level,
+								detectDuplicateImages: true,
+								downsampleImages: true,
+								embedFonts: true,
+							};
+						} else {
+							this.compressionSettings.level = level;
+						}
+						this.updateCompressionInfo();
+					});
+
+					// Initialize default
+					this.compressionSettings = {
+						level: defaultLevel,
+						detectDuplicateImages: true,
+						downsampleImages: true,
+						embedFonts: true,
+					};
+				});
+
+			// Advanced compression options
+			new Setting(compressionContainer)
+				.setName('Detect Duplicate Images')
+				.setDesc('Remove duplicate images to reduce file size')
+				.addToggle((toggle) => {
+					toggle.setValue(true);
+					toggle.onChange((value) => {
+						if (this.compressionSettings) {
+							this.compressionSettings.detectDuplicateImages = value;
+						}
+					});
+				});
+
+			new Setting(compressionContainer)
+				.setName('Downsample Images')
+				.setDesc('Reduce image resolution for smaller file size')
+				.addToggle((toggle) => {
+					toggle.setValue(true);
+					toggle.onChange((value) => {
+						if (this.compressionSettings) {
+							this.compressionSettings.downsampleImages = value;
+						}
+					});
+				});
+
+			// Compression info display
+			const compressionInfo = compressionContainer.createDiv({ cls: 'export-compression-info' });
+			this.renderCompressionInfo(compressionInfo);
+		}
+
+		// EPUB Validation Section (only for EPUB format)
+		if (this.selectedProfile.format === 'epub' || this.batchExportFormats.has('epub')) {
+			const validationContainer = contentEl.createDiv({ cls: 'export-validation-section' });
+			validationContainer.createEl('h3', { text: 'EPUB Validation' });
+
+			const validationDesc = validationContainer.createDiv({ cls: 'setting-item-description' });
+			validationDesc.style.marginBottom = '1rem';
+			validationDesc.textContent =
+				'Automatically validate EPUB files against industry standards (requires EPUBCheck and Java)';
+
+			// Validation toggle
+			new Setting(validationContainer)
+				.setName('Validate After Export')
+				.setDesc('Run EPUBCheck validation and show results after EPUB generation')
+				.addToggle((toggle) => {
+					toggle.setValue(this.selectedProfile.validateEpub || false);
+					toggle.onChange((value) => {
+						this.validateEpub = value;
+					});
+
+					// Initialize
+					this.validateEpub = this.selectedProfile.validateEpub || false;
+				});
+
+			// Validation info
+			const validationInfo = validationContainer.createDiv({ cls: 'export-info-box' });
+			validationInfo.style.fontSize = '0.9em';
+			validationInfo.style.color = 'var(--text-muted)';
+			validationInfo.style.marginTop = '0.75rem';
+			validationInfo.innerHTML = `
+				<div style="margin-bottom: 0.5rem;">
+					<strong>Why validate?</strong> Major retailers (Amazon, Apple Books, Kobo) require valid EPUB files.
+				</div>
+				<div style="margin-bottom: 0.5rem;">
+					<strong>What's checked:</strong> File structure, metadata, HTML validity, navigation, and accessibility.
+				</div>
+				<div>
+					<strong>Requirements:</strong> Java and EPUBCheck must be installed. You'll be prompted if missing.
+				</div>
+			`;
+		}
+
+		// Multi-Format Batch Export
+		const batchContainer = contentEl.createDiv({ cls: 'export-batch-section' });
+		batchContainer.createEl('h3', { text: 'Multi-Format Export' });
+
+		const batchDesc = batchContainer.createDiv({ cls: 'setting-item-description' });
+		batchDesc.style.marginBottom = '1rem';
+		batchDesc.textContent = 'Export to multiple formats in one operation';
+
+		// Format checkboxes
+		const formats: Array<{ format: ExportFormat; label: string }> = [
+			{ format: 'pdf', label: 'PDF (Print-ready)' },
+			{ format: 'epub', label: 'EPUB (E-readers)' },
+			{ format: 'docx', label: 'DOCX (Editing)' },
+			{ format: 'html', label: 'HTML (Web preview)' },
+			{ format: 'latex', label: 'LaTeX (Source)' },
+		];
+
+		for (const { format, label } of formats) {
+			new Setting(batchContainer).setName(label).addToggle((toggle) => {
+				toggle.setValue(format === this.selectedProfile.format); // Pre-select current format
+				if (format === this.selectedProfile.format) {
+					this.batchExportFormats.add(format);
+				}
+				toggle.onChange((value) => {
+					if (value) {
+						this.batchExportFormats.add(format);
+					} else {
+						this.batchExportFormats.delete(format);
+					}
+				});
+			});
+		}
 
 		// Output path (optional)
 		new Setting(contentEl)
@@ -278,6 +495,180 @@ export class ExportDialog extends Modal {
 		item.createEl('span', { text: value, cls: 'export-detail-value' });
 	}
 
+	private renderTrimSizeInfo(container: HTMLElement): void {
+		container.empty();
+
+		if (!this.selectedTrimSize) {
+			return;
+		}
+
+		const trimSize = getTrimSizeById(this.selectedTrimSize);
+		if (!trimSize) {
+			return;
+		}
+
+		// Estimate page count from selected files
+		let totalText = '';
+		for (const file of this.selectedFiles) {
+			try {
+				const content = this.app.vault.cachedRead(file);
+				content.then((text) => {
+					totalText += text;
+				});
+			} catch (error) {
+				console.warn('Could not read file for page count estimation:', file.path);
+			}
+		}
+
+		// Calculate estimates
+		const wordCount = countWords(totalText);
+		const pageCount = estimatePageCount(totalText, trimSize);
+
+		// Display info
+		const infoBox = container.createDiv({ cls: 'export-info-box' });
+		infoBox.style.padding = '0.75rem';
+		infoBox.style.marginTop = '0.5rem';
+		infoBox.style.background = 'var(--background-secondary)';
+		infoBox.style.borderRadius = '6px';
+
+		infoBox.createEl('div', {
+			text: `📏 ${trimSize.description}`,
+			cls: 'setting-item-description',
+		});
+		infoBox.createEl('div', {
+			text: `📐 Dimensions: ${trimSize.width} × ${trimSize.height}`,
+			cls: 'setting-item-description',
+		});
+		infoBox.createEl('div', {
+			text: `📖 Estimated: ${pageCount.toLocaleString()} pages (~${wordCount.toLocaleString()} words)`,
+			cls: 'setting-item-description',
+		});
+		infoBox.createEl('div', {
+			text: `ℹ️ ${trimSize.commonUse}`,
+			cls: 'setting-item-description',
+		});
+	}
+
+	private updateTrimSizeInfo(): void {
+		const infoEl = this.contentEl.querySelector('.export-trim-size-info');
+		if (infoEl instanceof HTMLElement) {
+			this.renderTrimSizeInfo(infoEl);
+		}
+	}
+
+	private renderVariantInfo(container: HTMLElement): void {
+		container.empty();
+
+		if (!this.selectedVariant) {
+			return;
+		}
+
+		const totalChapters = this.selectedFiles.length;
+		let selectedChapters = totalChapters;
+
+		const selection = this.selectedVariant.chapterSelection;
+		switch (selection.type) {
+			case 'count':
+				selectedChapters = Math.min(selection.count, totalChapters);
+				break;
+			case 'range':
+				selectedChapters = Math.min(selection.end - selection.start + 1, totalChapters);
+				break;
+			case 'percentage':
+				selectedChapters = Math.ceil((totalChapters * selection.percentage) / 100);
+				break;
+			case 'custom':
+				selectedChapters = selection.chapterIds.length;
+				break;
+		}
+
+		// Display info
+		const infoBox = container.createDiv({ cls: 'export-info-box' });
+		infoBox.style.padding = '0.75rem';
+		infoBox.style.marginTop = '0.5rem';
+		infoBox.style.background = 'var(--background-secondary)';
+		infoBox.style.borderRadius = '6px';
+
+		infoBox.createEl('div', {
+			text: `📚 Exporting ${selectedChapters} of ${totalChapters} chapters`,
+			cls: 'setting-item-description',
+		});
+
+		if (selection.type === 'count' && selectedChapters < totalChapters) {
+			infoBox.createEl('div', {
+				text: `⚡ Perfect for quick formatting tests`,
+				cls: 'setting-item-description',
+			});
+		} else if (selection.type === 'percentage') {
+			infoBox.createEl('div', {
+				text: `📄 Sample for beta readers or preview`,
+				cls: 'setting-item-description',
+			});
+		}
+	}
+
+	private updateVariantInfo(): void {
+		const infoEl = this.contentEl.querySelector('.export-variant-info');
+		if (infoEl instanceof HTMLElement) {
+			this.renderVariantInfo(infoEl);
+		}
+	}
+
+	private renderCompressionInfo(container: HTMLElement): void {
+		container.empty();
+
+		if (!this.compressionSettings || this.compressionSettings.level === 'none') {
+			return;
+		}
+
+		// Display info
+		const infoBox = container.createDiv({ cls: 'export-info-box' });
+		infoBox.style.padding = '0.75rem';
+		infoBox.style.marginTop = '0.5rem';
+		infoBox.style.background = 'var(--background-secondary)';
+		infoBox.style.borderRadius = '6px';
+
+		const levelDescriptions: Record<CompressionLevel, string> = {
+			none: '',
+			screen: '📱 Screen preview quality (~72 DPI) - Smallest file, good for quick review',
+			ebook: '📧 Ebook distribution quality (~150 DPI) - Balanced size, good for web/email',
+			printer: '🖨️ Print-on-demand quality (~300 DPI) - High quality for POD services',
+			prepress: '📰 Prepress quality (max DPI) - Maximum quality for offset printing',
+		};
+
+		const desc = levelDescriptions[this.compressionSettings.level];
+		if (desc) {
+			infoBox.createEl('div', {
+				text: desc,
+				cls: 'setting-item-description',
+			});
+		}
+
+		const features: string[] = [];
+		if (this.compressionSettings.detectDuplicateImages) features.push('Duplicate image detection');
+		if (this.compressionSettings.downsampleImages) features.push('Image downsampling');
+		if (this.compressionSettings.embedFonts) features.push('Font embedding');
+
+		if (features.length > 0) {
+			infoBox.createEl('div', {
+				text: `🔧 Optimizations: ${features.join(', ')}`,
+				cls: 'setting-item-description',
+			});
+		}
+
+		infoBox.createEl('div', {
+			text: '💾 Typical reduction: 40-60% file size',
+			cls: 'setting-item-description',
+		});
+	}
+
+	private updateCompressionInfo(): void {
+		const infoEl = this.contentEl.querySelector('.export-compression-info');
+		if (infoEl instanceof HTMLElement) {
+			this.renderCompressionInfo(infoEl);
+		}
+	}
+
 	private updateProfileInfo(): void {
 		// Update description
 		const descEl = this.contentEl.querySelector('.export-profile-desc p');
@@ -300,14 +691,68 @@ export class ExportDialog extends Modal {
 
 	private async handleExport(): Promise<void> {
 		try {
-			let profileToUse: ExportProfile = this.selectedProfile;
+			// Build profile with overrides
+			let profileToUse: ExportProfile = { ...this.selectedProfile };
+
+			// Apply CSL override
 			if (this.cslOverride && this.cslOverride.trim().length > 0) {
-				profileToUse = {
-					...this.selectedProfile,
-					pandocOptions: { ...this.selectedProfile.pandocOptions, csl: this.cslOverride.trim() },
+				profileToUse.pandocOptions = {
+					...profileToUse.pandocOptions,
+					csl: this.cslOverride.trim(),
 				};
 			}
-			await this.onExport(profileToUse, this.selectedFiles, this.outputPath || undefined);
+
+			// Apply trim size selection
+			if (this.selectedTrimSize) {
+				profileToUse.trimSize = this.selectedTrimSize;
+			}
+
+			// Apply variant selection
+			if (this.selectedVariant) {
+				profileToUse.variant = this.selectedVariant;
+			}
+
+			// Apply compression settings
+			if (this.compressionSettings && this.compressionSettings.level !== 'none') {
+				profileToUse.postProcessing = {
+					compression: this.compressionSettings,
+				};
+			}
+
+			// Apply EPUB validation setting
+			if (profileToUse.format === 'epub' && this.validateEpub) {
+				profileToUse.validateEpub = true;
+			}
+
+			// Determine files to export (apply variant filtering)
+			let filesToExport = this.selectedFiles;
+			if (this.selectedVariant) {
+				filesToExport = this.plugin.exportManager['filterFilesByVariant'](this.selectedFiles, this.selectedVariant);
+			}
+
+			// Check if batch export is requested (more than one format selected)
+			if (this.batchExportFormats.size > 1) {
+				// Batch export to multiple formats
+				const vaultPath = (this.plugin.app.vault.adapter as any).basePath || '';
+				const outputDir = this.outputPath || this.plugin.settings.export?.defaultOutputDir || vaultPath;
+
+				// Determine filename base
+				const firstFile = filesToExport[0];
+				const filenameBase = firstFile ? firstFile.basename : 'manuscript';
+
+				const batchOptions = {
+					formats: Array.from(this.batchExportFormats),
+					baseProfile: profileToUse,
+					outputDirectory: outputDir,
+					filenameBase: filenameBase,
+				};
+
+				await this.plugin.exportManager.exportMultipleFormats(batchOptions, filesToExport);
+			} else {
+				// Single format export
+				await this.onExport(profileToUse, filesToExport, this.outputPath || undefined);
+			}
+
 			this.close();
 		} catch (error) {
 			console.error('Export failed:', error);

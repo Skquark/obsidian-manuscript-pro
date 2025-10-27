@@ -1,10 +1,10 @@
 {
 	"id": "manuscript-pro",
-	"name": "Manuscript Pro",
+	"name": "ManuScript Pro",
 	"version": "0.3.0",
 	"minAppVersion": "0.15.0",
-	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export. Based on Dynamic Text Concealer by Matt Cole Anderson.",
-	"author": "Fork of Matt Cole Anderson's Dynamic Text Concealer",
-	"authorUrl": "https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer",
+	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export for academic and professional authors.",
+	"author": "ManuScript Pro Team",
+	"authorUrl": "https://github.com/yourusername/obsidian-manuscript-pro",
 	"isDesktopOnly": true
 }

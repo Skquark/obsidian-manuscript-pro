@@ -73,9 +73,7 @@ export class LicenseModal extends Modal {
 
 		// Last validated
 		if (license.lastChecked) {
-			const daysSince = Math.floor(
-				(Date.now() - license.lastChecked) / (1000 * 60 * 60 * 24)
-			);
+			const daysSince = Math.floor((Date.now() - license.lastChecked) / (1000 * 60 * 60 * 24));
 			const lastCheckedRow = infoGrid.createDiv({
 				cls: 'manuscript-info-row',
 			});
@@ -91,9 +89,7 @@ export class LicenseModal extends Modal {
 
 		// Grace period warning
 		if (license.status === LicenseStatus.GRACE_PERIOD && license.gracePeriodEnds) {
-			const daysLeft = Math.ceil(
-				(license.gracePeriodEnds - Date.now()) / (1000 * 60 * 60 * 24)
-			);
+			const daysLeft = Math.ceil((license.gracePeriodEnds - Date.now()) / (1000 * 60 * 60 * 24));
 
 			const warning = el.createDiv({ cls: 'manuscript-grace-period-warning' });
 			warning.createEl('strong', {
@@ -130,7 +126,7 @@ export class LicenseModal extends Modal {
 		});
 		deactivateBtn.onclick = async () => {
 			const confirmed = confirm(
-				'Are you sure you want to deactivate this license? You will need to re-activate it to use Pro features.'
+				'Are you sure you want to deactivate this license? You will need to re-activate it to use Pro features.',
 			);
 			if (confirmed) {
 				await this.plugin.licenseManager.deactivate();
@@ -147,12 +143,13 @@ export class LicenseModal extends Modal {
 	 * Render activation form
 	 */
 	private renderActivationForm(el: HTMLElement) {
-		// Header
-		el.createEl('h2', { text: '⭐ Activate ManuScript Pro' });
+		// Header with icon
+		const header = el.createDiv({ cls: 'manuscript-activation-header' });
+		header.createEl('h2', { text: '⭐ Activate ManuScript Pro' });
 
 		// Description
 		el.createEl('p', {
-			text: 'Enter your license key to unlock all Pro features.',
+			text: 'Enter your license key to unlock all Pro features and take your manuscript to the next level.',
 			cls: 'manuscript-activation-description',
 		});
 
@@ -182,9 +179,7 @@ export class LicenseModal extends Modal {
 
 				// Auto-format license key
 				text.inputEl.addEventListener('input', (e) => {
-					let value = (e.target as HTMLInputElement).value
-						.toUpperCase()
-						.replace(/[^A-Z0-9]/g, '');
+					let value = (e.target as HTMLInputElement).value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 					// Add dashes
 					if (value.length > 4) {

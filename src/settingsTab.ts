@@ -1,6 +1,9 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import LatexPandocConcealerPlugin from './main';
 import { getAllPatternGroups } from './patterns';
+import { TemplateEditorModal } from './export/TemplateEditorModal';
+import { createDefaultTemplate } from './export/TemplateConfiguration';
+import { PresetGalleryModal } from './export/PresetGalleryModal';
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: LatexPandocConcealerPlugin;
@@ -603,7 +606,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Show ribbon icon')
-			.setDesc('Display Manuscript Pro icon in the left sidebar ribbon (requires restart)')
+			.setDesc('Display ManuScript Pro icon in the left sidebar ribbon (requires restart)')
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
 					this.plugin.settings.showRibbonIcon = value;
@@ -1564,6 +1567,57 @@ export class SettingsTab extends PluginSettingTab {
 			await this.plugin.exportManager.exportCurrentFile('html-web');
 		});
 
+		// LaTeX Template Editor
+		const templateEditorSection = containerEl.createDiv({ cls: 'latex-template-editor-section' });
+		templateEditorSection.style.marginTop = '1.5rem';
+		templateEditorSection.style.padding = '1rem';
+		templateEditorSection.style.border = '1px solid var(--background-modifier-border)';
+		templateEditorSection.style.borderRadius = '6px';
+		templateEditorSection.style.backgroundColor = 'var(--background-secondary)';
+
+		templateEditorSection.createEl('h4', {
+			text: '📄 LaTeX Template Editor',
+			attr: { style: 'margin-top: 0; margin-bottom: 0.5rem;' },
+		});
+
+		const editorDesc = templateEditorSection.createEl('p', {
+			text: 'Create professional book templates with the visual LaTeX editor. Includes 8 built-in presets (fiction, non-fiction, academic, technical) and expert YAML/LaTeX editing mode.',
+		});
+		editorDesc.style.color = 'var(--text-muted)';
+		editorDesc.style.fontSize = '0.9em';
+		editorDesc.style.marginBottom = '0.75rem';
+
+		const editorBtnContainer = templateEditorSection.createDiv();
+		editorBtnContainer.style.display = 'flex';
+		editorBtnContainer.style.gap = '0.5rem';
+
+		const openEditorBtn = editorBtnContainer.createEl('button', {
+			text: '⚡ Open Template Editor',
+			cls: 'mod-cta',
+		});
+		openEditorBtn.addEventListener('click', () => {
+			const config = createDefaultTemplate();
+			const modal = new TemplateEditorModal(this.app, this.plugin, config, (savedConfig: any) => {
+				new Notice('LaTeX template configured successfully');
+				console.log('Template configuration:', savedConfig);
+			});
+			modal.open();
+		});
+
+		const browsePresetsBtn = editorBtnContainer.createEl('button', {
+			text: '📚 Browse Presets',
+		});
+		browsePresetsBtn.addEventListener('click', () => {
+			const modal = new PresetGalleryModal(this.app, this.plugin, (config: any) => {
+				const editorModal = new TemplateEditorModal(this.app, this.plugin, config, (savedConfig: any) => {
+					new Notice('Template preset loaded successfully');
+					console.log('Template configuration:', savedConfig);
+				});
+				editorModal.open();
+			});
+			modal.open();
+		});
+
 		// Template & Snippet System Settings
 		containerEl.createEl('h3', { text: 'Templates & Snippets' });
 
@@ -1900,10 +1954,6 @@ export class SettingsTab extends PluginSettingTab {
 		footer.style.borderTop = '1px solid var(--background-modifier-border)';
 		footer.style.color = 'var(--text-muted)';
 		footer.style.fontSize = '0.9em';
-
-		footer.createEl('p', {
-			text: 'Manuscript Pro is based on Dynamic Text Concealer by Matt Cole Anderson.',
-		});
 
 		const links = footer.createEl('p');
 		links.innerHTML =
