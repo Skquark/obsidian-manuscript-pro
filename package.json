@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-manuscript-pro",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export.",
 	"main": "main.js",
 	"type": "commonjs",
