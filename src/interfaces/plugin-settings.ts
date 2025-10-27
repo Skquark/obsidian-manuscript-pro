@@ -151,9 +151,6 @@ export interface PluginSettings {
 		defaultOutputDir?: string;
 		openAfterExport: boolean;
 
-		// Global defaults
-		defaultCslPath?: string;
-
 		profiles: any[]; // ExportProfile[] - avoid circular dependency
 		defaultProfileId?: string;
 
@@ -257,4 +254,8 @@ export interface PluginSettings {
 	// Legacy support for migration
 	regexp?: Array<string>;
 	doConcealEditMode?: boolean;
+
+	// License storage (obfuscated)
+	_lic?: string; // Encrypted license data
+	_inst?: string; // Instance ID
 }

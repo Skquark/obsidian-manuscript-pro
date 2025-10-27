@@ -40,6 +40,9 @@ import { ResearchFactModal } from './modals/ResearchFactModal';
 import { ResearchSearchModal } from './modals/ResearchSearchModal';
 import { ChecklistPanelView, CHECKLIST_PANEL_VIEW_TYPE } from './views/ChecklistPanelView';
 import { ProgressPanelView, PROGRESS_PANEL_VIEW_TYPE } from './views/ProgressPanelView';
+import { LicenseManager } from './licensing/LicenseManager';
+import { FeatureGate } from './licensing/FeatureGate';
+import { LicenseModal } from './licensing/modals/LicenseModal';
 
 // Default Settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -324,6 +327,8 @@ export default class ManuscriptProPlugin extends Plugin {
 	progressManager: ProgressTrackingManager;
 	researchBible: ResearchBibleManager;
 	readabilityAnalyzer: ReadabilityAnalyzer;
+	licenseManager: LicenseManager;
+	featureGate: FeatureGate;
 
 	async loadSettings() {
 		const loadedData = await this.loadData();
@@ -1174,6 +1179,15 @@ export default class ManuscriptProPlugin extends Plugin {
 	}
 
 	registerCommands() {
+		// License management
+		this.addCommand({
+			id: 'manage-license',
+			name: 'License & Activation',
+			callback: () => {
+				new LicenseModal(this.app, this).open();
+			},
+		});
+
 		// Main toggle
 		this.addCommand({
 			id: 'toggle-concealer',
@@ -1894,11 +1908,16 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Pre-Publication Checklist Commands
+		// Phase 4A: Pre-Publication Checklist Commands (PRO)
 		this.addCommand({
 			id: 'show-publication-checklist',
-			name: 'Show Pre-Publication Checklist',
+			name: 'Show Pre-Publication Checklist ⭐',
 			callback: async () => {
+				// Check Pro license first
+				if (!this.featureGate.checkFeatureAccess('checklist_panel' as any, 'Pre-Publication Checklist')) {
+					return;
+				}
+
 				if (!this.settings.quality?.checklist?.enabled) {
 					new Notice('Pre-Publication Checklist is disabled in settings');
 					return;
@@ -1978,8 +1997,13 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'show-progress-stats',
-			name: 'Show Progress Statistics',
+			name: 'Show Progress Statistics ⭐',
 			callback: async () => {
+				// Check Pro license first
+				if (!this.featureGate.checkFeatureAccess('progress_panel' as any, 'Progress Statistics')) {
+					return;
+				}
+
 				if (!this.settings.quality?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
@@ -1990,11 +2014,16 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Research Bible Commands
+		// Phase 4A: Research Bible Commands (PRO)
 		this.addCommand({
 			id: 'add-research-fact',
-			name: 'Add Research Fact',
+			name: 'Add Research Fact ⭐',
 			callback: async () => {
+				// Check Pro license first
+				if (!this.featureGate.checkFeatureAccess('research_fact_modal' as any, 'Research Fact Entry')) {
+					return;
+				}
+
 				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
@@ -2006,8 +2035,13 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'search-research-bible',
-			name: 'Search Research Bible',
+			name: 'Search Research Bible ⭐',
 			callback: async () => {
+				// Check Pro license first
+				if (!this.featureGate.checkFeatureAccess('research_search_modal' as any, 'Research Bible Search')) {
+					return;
+				}
+
 				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
@@ -2158,6 +2192,11 @@ export default class ManuscriptProPlugin extends Plugin {
 		await this.loadSettings();
 		await this.loadStatsData();
 		console.log('Loading Manuscript Pro Plugin');
+
+		// Initialize license manager FIRST (before feature checks)
+		this.licenseManager = new LicenseManager(this);
+		await this.licenseManager.load();
+		this.featureGate = new FeatureGate(this);
 
 		// Initialize managers
 		this.focusModeManager = new FocusModeManager(this);
@@ -2457,6 +2496,11 @@ export default class ManuscriptProPlugin extends Plugin {
 	}
 
 	async openManuscriptEditor() {
+		// Check Pro license first (PRO feature)
+		if (!this.featureGate.checkFeatureAccess('manuscript_editor' as any, 'Manuscript Editor')) {
+			return;
+		}
+
 		const loader = new ManuscriptLoader(this.app.vault);
 
 		// Find manifest file
