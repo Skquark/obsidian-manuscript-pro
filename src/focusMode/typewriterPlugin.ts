@@ -1,6 +1,5 @@
 import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
-import { syntaxTree } from '@codemirror/language';
 import { PluginSettings } from '../interfaces/plugin-settings';
 
 /**
@@ -50,9 +49,9 @@ export function createTypewriterPlugin(getSettings: () => PluginSettings) {
 						Decoration.mark({
 							class: 'typewriter-dimmed',
 							attributes: {
-								style: `opacity: ${settings.dimOpacity}`
-							}
-						})
+								style: `opacity: ${settings.dimOpacity}`,
+							},
+						}),
 					);
 				}
 
@@ -64,9 +63,9 @@ export function createTypewriterPlugin(getSettings: () => PluginSettings) {
 						Decoration.mark({
 							class: 'typewriter-active',
 							attributes: {
-								style: `background-color: ${settings.highlightColor}`
-							}
-						})
+								style: `background-color: ${settings.highlightColor}`,
+							},
+						}),
 					);
 				}
 
@@ -78,9 +77,9 @@ export function createTypewriterPlugin(getSettings: () => PluginSettings) {
 						Decoration.mark({
 							class: 'typewriter-dimmed',
 							attributes: {
-								style: `opacity: ${settings.dimOpacity}`
-							}
-						})
+								style: `opacity: ${settings.dimOpacity}`,
+							},
+						}),
 					);
 				}
 
@@ -93,7 +92,7 @@ export function createTypewriterPlugin(getSettings: () => PluginSettings) {
 			private getActiveZone(
 				view: EditorView,
 				pos: number,
-				zoneType: 'sentence' | 'paragraph' | 'section'
+				zoneType: 'sentence' | 'paragraph' | 'section',
 			): { from: number; to: number } {
 				switch (zoneType) {
 					case 'sentence':
@@ -229,7 +228,7 @@ export function createTypewriterPlugin(getSettings: () => PluginSettings) {
 			}
 		},
 		{
-			decorations: v => v.decorations
-		}
+			decorations: (v) => v.decorations,
+		},
 	);
 }

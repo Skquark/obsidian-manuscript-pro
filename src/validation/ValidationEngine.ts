@@ -11,10 +11,7 @@ import type {
 	ValidationSummary,
 	ValidationContext,
 	ValidationRule,
-	ValidationCategory,
-	ValidationSeverity,
 } from './ValidationInterfaces';
-import type { ValidationIssue as CrossRefValidationIssue } from '../crossref/CrossRefInterfaces';
 
 export class ValidationEngine {
 	private rules: ValidationRule[] = [];
@@ -257,13 +254,13 @@ export class ValidationEngine {
 	private async validateUndefinedReferences(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-    if (!this.plugin.crossRefManager) {
-      return issues;
-    }
+		if (!this.plugin.crossRefManager) {
+			return issues;
+		}
 
-    const validationResults = await this.plugin.crossRefManager.validateReferences();
+		const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-    for (const result of validationResults) {
+		for (const result of validationResults) {
 			if (result.type === 'undefined-ref' && result.severity === 'error') {
 				issues.push({
 					id: `undefined-ref-${result.location.file}-${result.location.line}`,
@@ -293,13 +290,13 @@ export class ValidationEngine {
 	private async validateDuplicateLabels(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-    if (!this.plugin.crossRefManager) {
-      return issues;
-    }
+		if (!this.plugin.crossRefManager) {
+			return issues;
+		}
 
-    const validationResults = await this.plugin.crossRefManager.validateReferences();
+		const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-    for (const result of validationResults) {
+		for (const result of validationResults) {
 			if (result.type === 'duplicate-label') {
 				issues.push({
 					id: `duplicate-label-${result.location.file}-${result.location.line}`,
@@ -326,13 +323,13 @@ export class ValidationEngine {
 	private async validateOrphanedLabels(context: ValidationContext): Promise<ValidationIssue[]> {
 		const issues: ValidationIssue[] = [];
 
-    if (!this.plugin.crossRefManager) {
-      return issues;
-    }
+		if (!this.plugin.crossRefManager) {
+			return issues;
+		}
 
-    const validationResults = await this.plugin.crossRefManager.validateReferences();
+		const validationResults = await this.plugin.crossRefManager.validateReferences();
 
-    for (const result of validationResults) {
+		for (const result of validationResults) {
 			if (result.type === 'orphaned-label') {
 				issues.push({
 					id: `orphaned-label-${result.location.file}-${result.location.line}`,
@@ -462,7 +459,7 @@ export class ValidationEngine {
 			if (!(file instanceof TFile)) continue;
 
 			const content = await this.plugin.app.vault.read(file);
-			const lines = content.split('\n');
+			content.split('\n');
 			let match;
 
 			while ((match = figurePattern.exec(content)) !== null) {

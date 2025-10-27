@@ -1,5 +1,4 @@
-import { App, WorkspaceLeaf, MarkdownView } from 'obsidian';
-import { EditorView } from '@codemirror/view';
+import { App, MarkdownView } from 'obsidian';
 import { PluginSettings } from '../interfaces/plugin-settings';
 import LatexPandocConcealerPlugin from '../main';
 
@@ -10,7 +9,7 @@ import LatexPandocConcealerPlugin from '../main';
 export class FocusModeManager {
 	private plugin: LatexPandocConcealerPlugin;
 	private app: App;
-	private isActive: boolean = false;
+	private isActive = false;
 
 	// Store UI state for restoration
 	private uiState: {

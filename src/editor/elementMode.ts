@@ -1,10 +1,8 @@
 import { keymap } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { classifyLine } from './classify';
+import { classifyLine, type Element } from './classify';
 import { isFountainStateField } from './plugin';
-
-type Element = 'Scene'|'Action'|'Character'|'Parenthetical'|'Dialogue'|'Transition'|'Lyrics'|'Unknown';
 
 function setLine(view: EditorView, lineNo: number, text: string) {
   const line = view.state.doc.line(lineNo + 1);
@@ -62,7 +60,7 @@ export function elementKeymap(): Extension {
         const line = v.state.doc.lineAt(sel.from);
         const t = line.text ?? '';
         const el = classifyLine(t) as Element;
-        // For Character/Parenthetical/Dialog, just insert newline to continue flow
+        // For Character/Parenthetical/Dialogue, insert newline to continue flow into dialogue
         if (el==='Character' || el==='Parenthetical' || el==='Dialogue') {
           v.dispatch({ changes: { from: sel.from, to: sel.to, insert: '\n' } });
           return true;
@@ -88,3 +86,4 @@ export function elementKeymap(): Extension {
     },
   ]);
 }
+

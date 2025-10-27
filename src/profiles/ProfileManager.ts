@@ -186,10 +186,10 @@ export class ProfileManager {
 	 */
 	createProfile(
 		name: string,
-		description: string = '',
-		icon: string = '⚙️',
+		description = '',
+		icon = '⚙️',
 		settings: Partial<PluginSettings> = {},
-		isDefault: boolean = false
+		isDefault = false
 	): ConcealerProfile {
 		const profile: ConcealerProfile = {
 			id: uuidv4(),
@@ -351,7 +351,7 @@ export class ProfileManager {
 	/**
 	 * Save current settings as a new profile
 	 */
-	saveCurrentAsProfile(name: string, description: string = '', icon: string = '⚙️'): ConcealerProfile {
+	saveCurrentAsProfile(name: string, description = '', icon = '⚙️'): ConcealerProfile {
 		const profile = this.createProfile(
 			name,
 			description,

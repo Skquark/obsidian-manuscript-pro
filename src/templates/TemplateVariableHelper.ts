@@ -3,7 +3,7 @@
  * Auto-fills template variables from file metadata and context
  */
 
-import { TFile, App } from 'obsidian';
+import { TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type { TemplateVariable } from './TemplateInterfaces';
 

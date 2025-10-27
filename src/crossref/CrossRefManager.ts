@@ -3,7 +3,7 @@
  * Indexes labels and references, provides validation and navigation
  */
 
-import { TFile, TFolder, Notice } from 'obsidian';
+import { TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type {
 	LabelEntry,
@@ -19,7 +19,7 @@ export class CrossRefManager {
 	private plugin: LatexPandocConcealerPlugin;
 	private labels: Map<string, LabelEntry> = new Map();
 	private indexedFiles: Set<string> = new Set();
-	private lastIndexTime: number = 0;
+	private lastIndexTime = 0;
 
 	constructor(plugin: LatexPandocConcealerPlugin) {
 		this.plugin = plugin;

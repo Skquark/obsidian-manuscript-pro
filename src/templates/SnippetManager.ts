@@ -3,17 +3,7 @@
  * Manages small reusable content snippets with text triggers
  */
 
-import {
-	App,
-	TFile,
-	TFolder,
-	Notice,
-	Editor,
-	EditorSuggest,
-	EditorPosition,
-	EditorSuggestTriggerInfo,
-	EditorSuggestContext,
-} from 'obsidian';
+import { App, TFile, TFolder, Editor } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type {
 	Snippet,

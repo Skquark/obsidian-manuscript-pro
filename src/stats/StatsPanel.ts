@@ -15,8 +15,8 @@ export class StatsPanel extends ItemView {
 	private stats: ManuscriptStats | null = null;
 	private refreshInterval: number | null = null;
 	private currentTab: 'overview' | 'details' | 'history' | 'goals' = 'overview';
-	private lastContent: string = '';
-	private isRefreshing: boolean = false;
+	private lastContent = '';
+	private isRefreshing = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: LatexPandocConcealerPlugin) {
 		super(leaf);
@@ -443,7 +443,7 @@ export class StatsPanel extends ItemView {
 		if (dates.length === 0) return 0;
 
 		let streak = 0;
-		let currentDate = new Date();
+		const currentDate = new Date();
 		currentDate.setHours(0, 0, 0, 0);
 
 		for (let i = 0; i < dates.length; i++) {

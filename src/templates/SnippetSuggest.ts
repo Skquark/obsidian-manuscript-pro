@@ -3,14 +3,7 @@
  * Shows snippet suggestions as you type trigger words
  */
 
-import {
-	Editor,
-	EditorPosition,
-	EditorSuggest,
-	EditorSuggestContext,
-	EditorSuggestTriggerInfo,
-	TFile,
-} from 'obsidian';
+import { Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo, TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type { Snippet } from './TemplateInterfaces';
 
@@ -28,11 +21,7 @@ export class SnippetSuggest extends EditorSuggest<SnippetSuggestion> {
 	/**
 	 * Check if we should trigger autocomplete
 	 */
-	onTrigger(
-		cursor: EditorPosition,
-		editor: Editor,
-		file: TFile | null,
-	): EditorSuggestTriggerInfo | null {
+	onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
 		// Check if snippet triggers are enabled
 		if (!this.plugin.settings.templates?.enableTriggers) {
 			return null;
@@ -106,13 +95,13 @@ export class SnippetSuggest extends EditorSuggest<SnippetSuggestion> {
 		const container = el.createDiv({ cls: 'snippet-suggestion' });
 
 		// Trigger badge
-		const triggerEl = container.createEl('code', {
+		container.createEl('code', {
 			text: suggestion.trigger,
 			cls: 'snippet-suggestion-trigger',
 		});
 
 		// Snippet name
-		const nameEl = container.createEl('span', {
+		container.createEl('span', {
 			text: suggestion.displayText,
 			cls: 'snippet-suggestion-name',
 		});
@@ -129,10 +118,7 @@ export class SnippetSuggest extends EditorSuggest<SnippetSuggestion> {
 	/**
 	 * Apply suggestion when selected
 	 */
-	async selectSuggestion(
-		suggestion: SnippetSuggestion,
-		evt: MouseEvent | KeyboardEvent,
-	): Promise<void> {
+	async selectSuggestion(suggestion: SnippetSuggestion, evt: MouseEvent | KeyboardEvent): Promise<void> {
 		const editor = this.context?.editor;
 		if (!editor) return;
 

@@ -5,13 +5,7 @@
 
 import { TFile, Notice } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
-import type {
-	ManuscriptConfig,
-	ChapterEntry,
-	TreeNode,
-	Part,
-	ManuscriptStructure,
-} from './ManuscriptInterfaces';
+import type { ManuscriptConfig, ChapterEntry, TreeNode } from './ManuscriptInterfaces';
 
 export class ManuscriptConfigManager {
 	private config: ManuscriptConfig | null = null;

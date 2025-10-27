@@ -3,19 +3,17 @@
  * Auto-fetch citations from DOI, arXiv, PubMed, etc.
  */
 
-import { Notice, requestUrl } from 'obsidian';
+import { requestUrl } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type {
 	CitationImportRequest,
 	CitationImportResult,
 	BibEntryEnhanced,
 	DOIMetadata,
-	ArXivMetadata,
-	PubMedMetadata,
 } from './EnhancedBibInterfaces';
 
 export class CitationImporter {
-	private lastRequestTime: number = 0;
+	private lastRequestTime = 0;
 	private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
 
 	constructor(private plugin: LatexPandocConcealerPlugin) {}

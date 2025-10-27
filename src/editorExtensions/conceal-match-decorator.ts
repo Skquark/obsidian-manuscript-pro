@@ -43,12 +43,12 @@ export class ConcealMatchDecorator extends MatchDecorator {
 		const selection = update.state.selection.ranges;
 
 		// Get the earliest and latest positon of the lines in the selected range
-		let lineFrom = update.state.doc.lineAt(selection[0].from).from;
-		let lineTo = update.state.doc.lineAt(selection[selection.length - 1].to).to;
+		const lineFrom = update.state.doc.lineAt(selection[0].from).from;
+		const lineTo = update.state.doc.lineAt(selection[selection.length - 1].to).to;
 
 		// Return the earliest and latest postions of the current and previous selection range
-		let updateFrom = Math.min(lineFrom, this.lastSelectionFrom);
-		let updateTo = Math.max(lineTo, this.lastSelectionTo);
+		const updateFrom = Math.min(lineFrom, this.lastSelectionFrom);
+		const updateTo = Math.max(lineTo, this.lastSelectionTo);
 
 		// Retain the current selected range for the next update
 		this.lastSelectionFrom = lineFrom;

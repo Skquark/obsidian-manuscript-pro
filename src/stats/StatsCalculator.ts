@@ -135,7 +135,6 @@ export class StatsCalculator {
 
 		let currentSection: SectionStats | null = null;
 		let currentContent = '';
-		let currentLine = 0;
 
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
@@ -167,7 +166,6 @@ export class StatsCalculator {
 				};
 
 				currentContent = '';
-				currentLine = i + 1;
 			} else {
 				currentContent += line + '\n';
 			}
@@ -289,7 +287,6 @@ export class StatsCalculator {
 
 		// Count equations
 		const displayEq = (this.content.match(/\$\$[\s\S]*?\$\$/g) || []).length;
-		const inlineEq = (this.content.match(/\$[^$\n]+?\$/g) || []).length;
 		const numberedEq = (this.content.match(/\\begin\{equation\}/g) || []).length;
 		const equations = displayEq + numberedEq;
 
@@ -321,9 +318,7 @@ export class StatsCalculator {
 	 */
 	private analyzeContent(cleanedContent: string): ContentStats {
 		// Count paragraphs (blocks separated by blank lines)
-		const paragraphs = cleanedContent
-			.split(/\n\s*\n/)
-			.filter((p) => p.trim().length > 0).length;
+		const paragraphs = cleanedContent.split(/\n\s*\n/).filter((p) => p.trim().length > 0).length;
 
 		// Count sentences (approximate)
 		const sentences = this.countSentences(cleanedContent);
@@ -420,7 +415,10 @@ export class StatsCalculator {
 	 * Calculate vocabulary richness (unique words / total words)
 	 */
 	private calculateVocabularyRichness(text: string): number {
-		const words = text.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+		const words = text
+			.toLowerCase()
+			.split(/\s+/)
+			.filter((w) => w.length > 0);
 		const uniqueWords = new Set(words);
 
 		if (words.length === 0) return 0;

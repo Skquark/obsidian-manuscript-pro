@@ -324,7 +324,7 @@ export const BUILTIN_SNIPPETS: Partial<Snippet>[] = [
 		category: 'equation',
 		trigger: 'eq',
 		tags: ['equation', 'math', 'inline'],
-		content: `$\{\{equation\}\}$`,
+		content: `${{ equation }}$`,
 		variables: [{ name: 'equation', label: 'Equation', required: true, type: 'text', placeholder: 'x = y' }],
 		cursorPosition: 1,
 		isBuiltIn: true,

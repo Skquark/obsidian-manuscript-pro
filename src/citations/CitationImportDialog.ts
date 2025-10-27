@@ -9,7 +9,7 @@ import type { CitationSource, CitationImportResult } from './EnhancedBibInterfac
 
 export class CitationImportDialog extends Modal {
 	private source: CitationSource = 'doi';
-	private identifier: string = '';
+	private identifier = '';
 	private onImport: (result: CitationImportResult) => Promise<void>;
 
 	constructor(

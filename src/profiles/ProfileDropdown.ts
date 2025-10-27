@@ -1,6 +1,5 @@
 import { Menu } from 'obsidian';
 import LatexPandocConcealerPlugin from '../main';
-import { ConcealerProfile } from './ProfileInterface';
 
 /**
  * Profile dropdown component for status bar
@@ -108,9 +107,9 @@ import { App, Modal, Setting } from 'obsidian';
 
 class SaveProfileModal extends Modal {
 	private onSave: (name: string, description: string, icon: string) => void;
-	private name: string = '';
-	private description: string = '';
-	private icon: string = '⚙️';
+	private name = '';
+	private description = '';
+	private icon = '⚙️';
 
 	constructor(app: App, onSave: (name: string, description: string, icon: string) => void) {
 		super(app);

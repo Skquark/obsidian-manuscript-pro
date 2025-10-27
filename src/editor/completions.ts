@@ -1,7 +1,6 @@
 import { autocompletion, Completion, CompletionContext } from '@codemirror/autocomplete';
 import { Extension } from '@codemirror/state';
 import { isFountainStateField } from './plugin';
-import { TOKEN_NAMES as n, LINE_TOKENS } from './consts';
 
 function unique<T>(arr: T[]): T[] { return Array.from(new Set(arr)); }
 
@@ -17,6 +16,20 @@ function collectCharacters(docText: string): string[] {
     }
   }
   return unique(chars).slice(0, 100);
+}
+
+function collectSceneLocations(docText: string): string[] {
+  const lines = docText.split(/\r?\n/);
+  const locs: string[] = [];
+  const sceneRe = /^(?:\.|INT\.|EXT\.|INT\.\/EXT\.|EST\.)\s*(.*)$/;
+  for (const ln of lines) {
+    const m = ln.match(sceneRe);
+    if (!m) continue;
+    const rest = (m[1] || '').trim();
+    const beforeDash = rest.split(' - ')[0]?.trim() || rest;
+    if (beforeDash) locs.push(beforeDash.toUpperCase());
+  }
+  return unique(locs).slice(0, 100);
 }
 
 export function fountainCompletions(): Extension {
@@ -39,17 +52,29 @@ export function fountainCompletions(): Extension {
       return { from: line.from + before.length, options };
     }
 
-    // Character name: if previous non-empty line is blank or a scene heading, suggest character names
+    // Inside a scene heading: suggest locations and time-of-day after INT./EXT.
+    const headingStart = before.match(/^(INT\.|EXT\.|INT\.\/EXT\.|EST\.)\s+([A-Z0-9 '\-.]*)$/);
+    if (headingStart) {
+      const docText = state.doc.toString();
+      const locs = collectSceneLocations(docText);
+      const tod = ['DAY', 'NIGHT', 'DAWN', 'DUSK', 'LATER', 'CONTINUOUS', 'MOMENTS LATER'];
+      const all: string[] = [...locs, ...tod.map(t => ' - ' + t)];
+      const from = line.from + headingStart[0].length - headingStart[2].length;
+      const options: Completion[] = all.map((x) => ({ label: x.trimStart(), type: 'text' }));
+      return { from, options, filter: true };
+    }
+
+    // Character name completions
     const docText = state.doc.toString();
     const chars = collectCharacters(docText);
     if (chars.length && /@[A-Z]*$|^[A-Z][A-Z ]{1,}$/.test(before)) {
       const from = before.lastIndexOf(' ') >= 0 ? line.from + before.lastIndexOf(' ') + 1 : line.from;
       const options: Completion[] = chars.map((c) => ({ label: c, type: 'variable' }));
-      return { from, options, filter: true }; 
+      return { from, options, filter: true };
     }
 
-    // Transitions: when line ends with TO or has CUT
-    const trans = ['CUT TO:', 'DISSOLVE TO:', 'SMASH CUT TO:', 'FADE OUT.', 'FADE IN:'];
+    // Transitions: rich list
+    const trans = ['CUT TO:', 'MATCH CUT TO:', 'JUMP CUT TO:', 'DISSOLVE TO:', 'SMASH CUT TO:', 'WIPE TO:', 'BACK TO:', 'FADE TO BLACK.', 'FADE OUT.', 'FADE IN:'];
     if (/[A-Z]*$/.test(before)) {
       const from = before.lastIndexOf(' ') >= 0 ? line.from + before.lastIndexOf(' ') + 1 : line.from;
       const options: Completion[] = trans.map((t) => ({ label: t, type: 'keyword' }));

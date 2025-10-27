@@ -53,7 +53,6 @@ export class CitationSuggestionEngine {
 
 		// Extract context around cursor
 		const lines = content.split('\n');
-		const line = lines[position.line] || '';
 		const offset = lines.slice(0, position.line).join('\n').length + position.ch;
 
 		const contextStart = Math.max(0, offset - contextWindow);

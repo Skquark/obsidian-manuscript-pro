@@ -8,8 +8,8 @@ import { PatternGroup, Pattern } from '../interfaces/plugin-settings';
 export function createPandocMarkupGroup(): PatternGroup {
 	const patterns: Pattern[] = [
 		{
-			regexString: String.raw`^:::\s*\{[^\}]*\}`,
-			regex: /^:::\s*\{[^\}]*\}/gm,
+			regexString: String.raw`^:::\s*\{[^}]*\}`,
+			regex: /^:::\s*\{[^}]*\}/gm,
 			replacement: '',
 			description: 'Hide div openers with attributes :::{.class}',
 		},
@@ -44,8 +44,8 @@ export function createPandocMarkupGroup(): PatternGroup {
 			description: 'Hide example list markers (@)',
 		},
 		{
-			regexString: String.raw`\{(?:width|height)=[^\}]+\}`,
-			regex: /\{(?:width|height)=[^\}]+\}/g,
+			regexString: String.raw`\{(?:width|height)=[^}]+\}`,
+			regex: /\{(?:width|height)=[^}]+\}/g,
 			replacement: '',
 			description: 'Hide image sizing attributes',
 		},

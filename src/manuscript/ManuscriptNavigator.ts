@@ -107,7 +107,7 @@ export class ManuscriptNavigator extends ItemView {
 			text: `Create a ${this.plugin.settings.manuscriptNavigator.configFile} file to define your manuscript structure.`,
 		});
 
-		const exampleText = emptyContainer.createEl('p', {
+		emptyContainer.createEl('p', {
 			text: 'Example structure:',
 			cls: 'empty-state-example-label',
 		});
@@ -159,7 +159,7 @@ export class ManuscriptNavigator extends ItemView {
 	private renderEmptyHeader(): void {
 		const header = this.contentEl.createDiv({ cls: 'manuscript-navigator-header' });
 
-		const titleEl = header.createEl('h2', { text: 'Manuscript Navigator' });
+		header.createEl('h2', { text: 'Manuscript Navigator' });
 
 		const buttonContainer = header.createDiv({ cls: 'manuscript-header-buttons' });
 

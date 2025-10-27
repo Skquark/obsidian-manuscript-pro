@@ -14,16 +14,8 @@ import { Notice, TFile } from 'obsidian';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
-import * as fs from 'fs/promises';
 import type LatexPandocConcealerPlugin from '../main';
-import type {
-	ExportProfile,
-	ExportTask,
-	ExportResult,
-	ExportStatus,
-	PandocOptions,
-	ManuscriptMetadata,
-} from './ExportInterfaces';
+import type { ExportProfile, ExportTask, ExportResult, ManuscriptMetadata } from './ExportInterfaces';
 
 const execFileAsync = promisify(execFile);
 
@@ -194,13 +186,10 @@ export class ExportEngine {
 		// Output file
 		args.push('-o', outputPath);
 
-    // Format-specific options
-    if (profile.format !== 'markdown') {
-      // For PDF, allow pandoc to choose appropriate route (commonly via LaTeX) and avoid '-t pdf' which can be brittle
-      if (profile.format !== 'pdf') {
-        args.push('-t', profile.format);
-      }
-    }
+		// Format-specific options
+		if (profile.format !== 'markdown') {
+			args.push('-t', profile.format);
+		}
 
 		// Standalone document
 		if (options.standalone !== false) {

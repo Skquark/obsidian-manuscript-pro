@@ -4,7 +4,7 @@
  * Tracks writing progress with goals, streaks, velocity, and chapter-level analytics.
  */
 
-import { App, TFile, Notice } from 'obsidian';
+import { App, Notice } from 'obsidian';
 import type ManuscriptProPlugin from '../main';
 import {
 	WritingGoal,
@@ -24,7 +24,7 @@ export class ProgressTrackingManager {
 	private plugin: ManuscriptProPlugin;
 	private data: EnhancedProgressData;
 	private currentSession: WritingSession | null = null;
-	private lastWordCount: number = 0;
+	private lastWordCount = 0;
 
 	constructor(plugin: ManuscriptProPlugin) {
 		this.plugin = plugin;
@@ -279,7 +279,7 @@ export class ProgressTrackingManager {
 			const previousCurrent = goal.current;
 
 			switch (goal.type) {
-				case 'daily':
+				case 'daily': {
 					const todaySnapshot = this.data.history.find((h) => {
 						const d = new Date(h.date);
 						d.setHours(0, 0, 0, 0);
@@ -287,21 +287,25 @@ export class ProgressTrackingManager {
 					});
 					goal.current = todaySnapshot?.dailyWords || 0;
 					break;
+				}
 
-				case 'weekly':
+				case 'weekly': {
 					const weekAgo = new Date(today);
 					weekAgo.setDate(weekAgo.getDate() - 7);
 					const weekSnapshots = this.data.history.filter((h) => new Date(h.date) >= weekAgo);
 					goal.current = weekSnapshots.reduce((sum, h) => sum + h.dailyWords, 0);
 					break;
+				}
 
-				case 'total':
+				case 'total': {
 					goal.current = this.getCurrentTotalWords();
 					break;
+				}
 
-				case 'session':
+				case 'session': {
 					goal.current = this.currentSession?.wordsWritten || 0;
 					break;
+				}
 			}
 
 			// Notify if goal achieved
@@ -416,7 +420,7 @@ export class ProgressTrackingManager {
 		}
 	}
 
-	getHistory(days: number = 30): ProgressSnapshot[] {
+	getHistory(days = 30): ProgressSnapshot[] {
 		return this.data.history.slice(-days);
 	}
 

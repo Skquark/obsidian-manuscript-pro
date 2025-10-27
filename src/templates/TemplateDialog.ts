@@ -4,7 +4,7 @@
  */
 
 import { App, Modal, Setting, Notice } from 'obsidian';
-import type LatexPandocConcealerPlugin from '../main';
+
 import type { Template, Snippet, TemplateVariable } from './TemplateInterfaces';
 
 /**
@@ -13,7 +13,7 @@ import type { Template, Snippet, TemplateVariable } from './TemplateInterfaces';
 export class TemplateSelectorModal extends Modal {
 	private templates: Template[];
 	private onSelect: (template: Template) => void;
-	private searchQuery: string = '';
+	private searchQuery = '';
 
 	constructor(app: App, templates: Template[], onSelect: (template: Template) => void) {
 		super(app);
@@ -295,7 +295,7 @@ export class TemplateVariableModal extends Modal {
 export class SnippetSelectorModal extends Modal {
 	private snippets: Snippet[];
 	private onSelect: (snippet: Snippet) => void;
-	private searchQuery: string = '';
+	private searchQuery = '';
 
 	constructor(app: App, snippets: Snippet[], onSelect: (snippet: Snippet) => void) {
 		super(app);

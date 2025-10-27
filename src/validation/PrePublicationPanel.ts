@@ -76,7 +76,7 @@ export class PrePublicationPanel extends ItemView {
 	private renderHeader(): void {
 		const header = this.contentEl.createDiv({ cls: 'validation-panel-header' });
 
-		const title = header.createEl('h2', { text: 'Pre-publication Checklist' });
+		header.createEl('h2', { text: 'Pre-publication Checklist' });
 
 		const runButton = header.createEl('button', {
 			text: this.isValidating ? 'Validating...' : 'Run Validation',
@@ -98,7 +98,7 @@ export class PrePublicationPanel extends ItemView {
 
 		emptyContainer.createEl('h3', { text: 'Ready to Validate' });
 
-		const description = emptyContainer.createEl('p', {
+		emptyContainer.createEl('p', {
 			text: 'Click "Run Validation" to check your manuscript for common issues:',
 		});
 
@@ -118,7 +118,7 @@ export class PrePublicationPanel extends ItemView {
 			checklistEl.createEl('li', { text: check });
 		});
 
-		const note = emptyContainer.createEl('p', {
+		emptyContainer.createEl('p', {
 			text: 'Validation scans all markdown files in your vault.',
 			cls: 'validation-note',
 		});
@@ -200,7 +200,7 @@ export class PrePublicationPanel extends ItemView {
 		const filtersContainer = this.contentEl.createDiv({ cls: 'validation-filters' });
 
 		// Severity filter
-		const severityLabel = filtersContainer.createEl('label', { text: 'Severity: ' });
+		filtersContainer.createEl('label', { text: 'Severity: ' });
 		const severitySelect = filtersContainer.createEl('select', { cls: 'validation-filter-select' });
 
 		const severityOptions: Array<{ value: ValidationSeverity | 'all'; label: string }> = [
@@ -224,7 +224,7 @@ export class PrePublicationPanel extends ItemView {
 		});
 
 		// Category filter
-		const categoryLabel = filtersContainer.createEl('label', { text: 'Category: ', cls: 'filter-label-spacing' });
+		filtersContainer.createEl('label', { text: 'Category: ', cls: 'filter-label-spacing' });
 		const categorySelect = filtersContainer.createEl('select', { cls: 'validation-filter-select' });
 
 		const categoryOptions: Array<{ value: ValidationCategory | 'all'; label: string }> = [

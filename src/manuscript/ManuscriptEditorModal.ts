@@ -16,7 +16,7 @@ export class ManuscriptEditorModal extends Modal {
 	manifestFile: TFile;
 	loader: ManuscriptLoader;
 	currentTab: EditorTab = 'info';
-	hasUnsavedChanges: boolean = false;
+	hasUnsavedChanges = false;
 
 	constructor(app: App, plugin: LatexPandocConcealerPlugin, manifestFile: TFile, manuscript: ManuscriptProject) {
 		super(app);

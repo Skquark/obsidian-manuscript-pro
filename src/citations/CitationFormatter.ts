@@ -99,7 +99,6 @@ export class APAStyle implements CitationStyle {
 
 	private formatBook(entry: BibEntry, authors: string, year: string, title: string): string {
 		const publisher = entry.fields.get('publisher') || '';
-		const address = entry.fields.get('address') || '';
 		const edition = entry.fields.get('edition') || '';
 
 		let citation = `${authors} (${year}). <em>${title}</em>`;
@@ -368,7 +367,7 @@ export class MLAStyle implements CitationStyle {
  */
 export class CitationFormatter {
 	private styles: Map<string, CitationStyle> = new Map();
-	private activeStyle: string = 'APA';
+	private activeStyle = 'APA';
 
 	constructor() {
 		// Register built-in styles

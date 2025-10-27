@@ -7,7 +7,7 @@
 
 import { App, Notice, TFile } from 'obsidian';
 import type ManuscriptProPlugin from '../main';
-import { ChecklistType, ChecklistCategory, ChecklistItem, PublicationChecklist } from './QualityInterfaces';
+import { ChecklistType, ChecklistItem, PublicationChecklist } from './QualityInterfaces';
 
 export class PublicationChecklistManager {
 	private app: App;

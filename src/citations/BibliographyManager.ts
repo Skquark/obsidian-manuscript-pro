@@ -3,7 +3,7 @@
  * Discovers, loads, and caches bibliography files
  */
 
-import { TFile, TFolder, Vault, MetadataCache } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { BibTeXParser, BibEntry } from './BibTeXParser';
 import type LatexPandocConcealerPlugin from '../main';
 
@@ -15,8 +15,8 @@ export class BibliographyManager {
 	private parser: BibTeXParser;
 	private entries: Map<string, BibEntry> = new Map();
 	private bibFiles: string[] = [];
-	private lastLoaded: number = 0;
-	private cacheTimeout: number = 60000; // 1 minute
+	private lastLoaded = 0;
+	private cacheTimeout = 60000; // 1 minute
 	private readonly MAX_CACHE_ENTRIES = 10000; // Prevent unbounded memory growth
 
 	constructor(plugin: LatexPandocConcealerPlugin) {
@@ -194,24 +194,24 @@ export class BibliographyManager {
 	/**
 	 * Get all citation entries
 	 */
-    getAllCitations(): Map<string, BibEntry> {
-        return this.entries;
-    }
+	getAllCitations(): Map<string, BibEntry> {
+		return this.entries;
+	}
 
-    /**
-     * Generate a BibTeX string for a single entry
-     */
-    toBibTeX(entry: BibEntry): string {
-        const fields = entry.fields instanceof Map ? entry.fields : new Map(Object.entries(entry.fields as any));
-        const lines: string[] = [];
-        lines.push(`@${entry.type}{${entry.key},`);
-        fields.forEach((value: string, key: string) => {
-            const escaped = (value ?? '').toString().replace(/[{}]/g, '\\$&');
-            lines.push(`  ${key} = {${escaped}},`);
-        });
-        lines.push('}');
-        return lines.join('\n');
-    }
+	/**
+	 * Generate a BibTeX string for a single entry
+	 */
+	toBibTeX(entry: BibEntry): string {
+		const fields = entry.fields instanceof Map ? entry.fields : new Map(Object.entries(entry.fields as any));
+		const lines: string[] = [];
+		lines.push(`@${entry.type}{${entry.key},`);
+		fields.forEach((value: string, key: string) => {
+			const escaped = (value ?? '').toString().replace(/[{}]/g, '\\$&');
+			lines.push(`  ${key} = {${escaped}},`);
+		});
+		lines.push('}');
+		return lines.join('\n');
+	}
 
 	/**
 	 * Check if citation key exists

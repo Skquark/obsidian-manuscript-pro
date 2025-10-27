@@ -40,11 +40,11 @@ class ConcealViewPlugin implements PluginValue {
 	matchDecorator: MatchDecorator;
 	settings: PluginSettings;
 	replacement: string;
-	cursorLineFrom: number = -1;
-	cursorLineTo: number = -1;
-	lastCursorPos: number = -1;
+	cursorLineFrom = -1;
+	cursorLineTo = -1;
+	lastCursorPos = -1;
 
-	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings, replacement: string = '') {
+	constructor(view: EditorView, regexp: RegExp, settings: PluginSettings, replacement = '') {
 		this.settings = settings;
 		this.replacement = replacement;
 		this.matchDecorator = new ConcealMatchDecorator({
@@ -254,7 +254,7 @@ const pluginSpec: PluginSpec<ConcealViewPlugin> = {
 /**
  * concealViewPlugin creates a ViewPlugin to be registered as an editorExtension
  */
-export const concealViewPlugin = (regexp: RegExp, settings: PluginSettings, replacement: string = '') => {
+export const concealViewPlugin = (regexp: RegExp, settings: PluginSettings, replacement = '') => {
 	return ViewPlugin.define((view) => new ConcealViewPlugin(view, regexp, settings, replacement), pluginSpec);
 };
 

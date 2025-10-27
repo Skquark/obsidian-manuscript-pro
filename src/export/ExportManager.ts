@@ -6,7 +6,7 @@
 import { Notice, TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import { ExportEngine } from './ExportEngine';
-import type { ExportProfile, ExportResult, TemplateInfo, ManuscriptMetadata } from './ExportInterfaces';
+import type { ExportProfile, ExportResult, TemplateInfo } from './ExportInterfaces';
 import { DEFAULT_EXPORT_PROFILES } from './ExportInterfaces';
 
 export class ExportManager {
@@ -17,20 +17,6 @@ export class ExportManager {
 	constructor(private plugin: LatexPandocConcealerPlugin) {
 		this.exportEngine = new ExportEngine(plugin);
 		this.loadProfiles();
-	}
-
-	/**
-	 * Check Pandoc availability and cache version
-	 */
-	async checkPandoc(): Promise<boolean> {
-		return await this.exportEngine.checkPandocAvailable();
-	}
-
-	/**
-	 * Get cached Pandoc version (after checkPandoc)
-	 */
-	getPandocVersion(): string | null {
-		return this.exportEngine.getPandocVersion();
 	}
 
 	/**
@@ -200,15 +186,8 @@ export class ExportManager {
 		// Extract metadata
 		const metadata = await this.exportEngine.extractMetadata(files);
 
-        // Inject global CSL if not set in profile
-        const effectiveProfile = { ...profile, pandocOptions: { ...profile.pandocOptions } };
-        const defaultCsl = this.plugin.settings.export?.defaultCslPath;
-        if (defaultCsl && !effectiveProfile.pandocOptions.csl) {
-            effectiveProfile.pandocOptions.csl = defaultCsl;
-        }
-
-        // Perform export
-        const result = await this.exportEngine.exportManuscript(effectiveProfile, inputPaths, outputPath, metadata);
+		// Perform export
+		const result = await this.exportEngine.exportManuscript(profile, inputPaths, outputPath, metadata);
 
 		// Show result
 		if (result.success) {

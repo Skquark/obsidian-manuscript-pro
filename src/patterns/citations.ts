@@ -6,44 +6,44 @@ import { PatternGroup, Pattern } from '../interfaces/plugin-settings';
  */
 
 export function createCitationsGroup(): PatternGroup {
-    const patterns: Pattern[] = [
+	const patterns: Pattern[] = [
 		{
 			regexString: String.raw`\[@`,
 			regex: /\[@/g,
 			replacement: '[',
-			description: 'Simplify opening citation bracket [@'
+			description: 'Simplify opening citation bracket [@',
 		},
 		{
 			regexString: String.raw`(?<=\[)-@`,
 			regex: /(?<=\[)-@/g,
 			replacement: '',
-			description: 'Hide suppressed author marker -@'
+			description: 'Hide suppressed author marker -@',
 		},
 		{
 			regexString: String.raw`;\s*@`,
 			regex: /;\s*@/g,
 			replacement: '; ',
-			description: 'Hide @ in multi-citations'
+			description: 'Hide @ in multi-citations',
 		},
-        // Hide only the delimiters of @{...}, leave inner content visible
-        {
-            regexString: String.raw`@\{(?=[^\}]+\})`,
-            regex: /@\{(?=[^\}]+\})/g,
-            replacement: '',
-            description: 'Hide opening delimiter of braced citations (@{)'
-        },
-        {
-            regexString: String.raw`(?<=@\{[^\}]+)\}`,
-            regex: /(?<=@\{[^\}]+)\}/g,
-            replacement: '',
-            description: 'Hide closing delimiter of braced citations (})'
-        },
+		// Hide only the delimiters of @{...}, leave inner content visible
+		{
+			regexString: String.raw`@\{(?=[^}]+\})`,
+			regex: /@\{(?=[^}]+\})/g,
+			replacement: '',
+			description: 'Hide opening delimiter of braced citations (@{)',
+		},
+		{
+			regexString: String.raw`(?<=@\{[^}]+)\}`,
+			regex: /(?<=@\{[^}]+)\}/g,
+			replacement: '',
+			description: 'Hide closing delimiter of braced citations (})',
+		},
 		{
 			regexString: String.raw`(?<!\[)@(?=[\w])`,
 			regex: /(?<!\[)@(?=[\w])/g,
 			replacement: '',
-			description: 'Hide standalone @ before citekey'
-		}
+			description: 'Hide standalone @ before citekey',
+		},
 	];
 
 	return {
@@ -51,6 +51,6 @@ export function createCitationsGroup(): PatternGroup {
 		name: 'Citations',
 		description: 'Simplify Pandoc citation syntax ([@author], @author, multi-citations)',
 		enabled: true,
-		patterns
+		patterns,
 	};
 }

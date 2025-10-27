@@ -3,7 +3,7 @@
  * Shows all labels in the vault with filtering and navigation
  */
 
-import { ItemView, WorkspaceLeaf, Menu, MarkdownView, TFile, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Menu, MarkdownView, TFile } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import type { LabelEntry, LabelType } from './CrossRefInterfaces';
 
@@ -12,7 +12,7 @@ export const LABEL_BROWSER_VIEW_TYPE = 'label-browser';
 export class LabelBrowser extends ItemView {
 	plugin: LatexPandocConcealerPlugin;
 	private filterType: LabelType | 'all' = 'all';
-	private searchQuery: string = '';
+	private searchQuery = '';
 
 	constructor(leaf: WorkspaceLeaf, plugin: LatexPandocConcealerPlugin) {
 		super(leaf);
@@ -195,7 +195,7 @@ export class LabelBrowser extends ItemView {
 
 				const labelHeader = labelItem.createDiv({ cls: 'label-item-header' });
 
-				const typeBadge = labelHeader.createEl('span', {
+				labelHeader.createEl('span', {
 					cls: `label-type-badge label-type-${label.type}`,
 					text: label.type.substring(0, 3).toUpperCase(),
 				});
@@ -206,7 +206,7 @@ export class LabelBrowser extends ItemView {
 				});
 				labelKey.onclick = () => this.jumpToLabel(label);
 
-				const refCount = labelHeader.createEl('span', {
+				labelHeader.createEl('span', {
 					text: `${label.references.length} refs`,
 					cls: 'label-ref-count',
 				});

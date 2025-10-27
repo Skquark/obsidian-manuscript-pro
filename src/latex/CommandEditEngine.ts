@@ -26,7 +26,6 @@ export function detectCommandOnLine(
 	// Find all commands on line
 	const re = /\\([A-Za-z]+)(\[[^\]]*\])?(\{[^}]*\})?(\{[^}]*\})?/g;
 	let m: RegExpMatchArray | null;
-	let idx = 0;
 	while ((m = re.exec(lineText)) !== null) {
 		const start = m.index;
 		if (start === undefined) continue; // Safety check

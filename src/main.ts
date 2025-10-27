@@ -175,9 +175,6 @@ const DEFAULT_SETTINGS: PluginSettings = {
 		defaultOutputDir: undefined, // Use vault root
 		openAfterExport: true,
 
-		// Global defaults
-		defaultCslPath: undefined,
-
 		profiles: [], // Will be populated with DEFAULT_EXPORT_PROFILES
 		defaultProfileId: 'pdf-academic',
 
@@ -449,44 +446,6 @@ export default class ManuscriptProPlugin extends Plugin {
 		if (this.settings.crossRef.enabled && this.settings.crossRef.autoComplete) {
 			this.editorExtensions.push(createRefAutoComplete(this));
 		}
-	}
-
-	private registerReadingModePostProcessors() {
-		if (!this.settings.enabled || !this.settings.enableInReadingMode) return;
-
-		const allGroups = getAllPatternGroups();
-		const enabledGroups = allGroups.filter((group) => {
-			const groupKey = group.id as keyof typeof this.settings.groups;
-			return this.settings.groups[groupKey] === true;
-		});
-
-		enabledGroups.forEach((group) => {
-			group.patterns.forEach((pattern) => {
-				try {
-					const regex = createRegexWithFallback(pattern.regexString);
-					const pp = new ConcealPostProcessor(regex, pattern.replacement || '');
-					this.registerMarkdownPostProcessor(pp.process);
-				} catch (e) {
-					if (this.settings.debugMode) {
-						console.error('Invalid pattern for reading mode:', pattern, e);
-					}
-				}
-			});
-		});
-
-		// Custom patterns (no replacement semantics)
-		this.settings.customPatterns.forEach((regexString) => {
-			if (!regexString) return;
-			try {
-				const regex = createRegexWithFallback(regexString);
-				const pp = new ConcealPostProcessor(regex, '');
-				this.registerMarkdownPostProcessor(pp.process);
-			} catch (e) {
-				if (this.settings.debugMode) {
-					console.error('Invalid custom pattern for reading mode:', regexString, e);
-				}
-			}
-		});
 	}
 
 	updateEditorExtension() {
@@ -1300,8 +1259,6 @@ export default class ManuscriptProPlugin extends Plugin {
 			callback: () => {
 				this.focusModeManager.toggle();
 				new Notice(`Focus Mode ${this.focusModeManager.isEnabled() ? 'enabled' : 'disabled'}`);
-				// Ensure status bar reflects the current state immediately
-				this.updateStatusBar();
 			},
 		});
 
@@ -1949,7 +1906,7 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				const checklist = this.checklistManager.getChecklist(activeFile);
+				this.checklistManager.getChecklist(activeFile);
 				const markdown = this.checklistManager.exportAsMarkdown(activeFile.path);
 
 				// Create a modal or panel to display the checklist
@@ -1983,7 +1940,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'start-writing-session',
 			name: 'Start Writing Session',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -2003,7 +1960,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'end-writing-session',
 			name: 'End Writing Session',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -2023,7 +1980,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'show-progress-stats',
 			name: 'Show Progress Statistics',
 			callback: async () => {
-				if (!this.settings.quality?.progress?.enabled) {
+				if (!this.settings.phase4?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -2046,7 +2003,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'add-research-fact',
 			name: 'Add Research Fact',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2061,7 +2018,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'search-research-bible',
 			name: 'Search Research Bible',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2075,7 +2032,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'check-terminology-consistency',
 			name: 'Check Terminology Consistency',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2086,7 +2043,7 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				const content = await this.app.vault.read(activeFile);
+				await this.app.vault.read(activeFile);
 				const issues = await this.researchBible.checkTerminologyConsistency();
 
 				if (issues.length === 0) {
@@ -2102,12 +2059,12 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-glossary',
 			name: 'Export Glossary',
 			callback: async () => {
-				if (!this.settings.quality?.researchBible?.enabled) {
+				if (!this.settings.phase4?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
 
-				const format = this.settings.quality.researchBible.exportFormat || 'markdown';
+				const format = this.settings.phase4.researchBible.exportFormat || 'markdown';
 				const glossary = this.researchBible.exportGlossary(format);
 
 				new Notice(`Glossary exported to console as ${format}`);
@@ -2120,7 +2077,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-readability',
 			name: 'Analyze Document Readability',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2142,7 +2099,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-section-readability',
 			name: 'Analyze Section Readability',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2165,7 +2122,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-readability-report',
 			name: 'Export Readability Report',
 			callback: async () => {
-				if (!this.settings.quality?.readability?.enabled) {
+				if (!this.settings.phase4?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2250,19 +2207,19 @@ export default class ManuscriptProPlugin extends Plugin {
 			this.registerEditorSuggest(this.snippetSuggest);
 		}
 
-		// Initialize Quality managers
+		// Initialize Phase 4A managers
 		this.checklistManager = new PublicationChecklistManager(this);
 		this.progressManager = new ProgressTrackingManager(this);
 		this.researchBible = new ResearchBibleManager(this);
 		this.readabilityAnalyzer = new ReadabilityAnalyzer(this);
 
-		if (this.settings.quality?.checklist?.enabled) {
+		if (this.settings.phase4?.checklist?.enabled) {
 			await this.checklistManager.initialize();
 		}
-		if (this.settings.quality?.progress?.enabled) {
+		if (this.settings.phase4?.progress?.enabled) {
 			await this.progressManager.initialize();
 		}
-		if (this.settings.quality?.researchBible?.enabled) {
+		if (this.settings.phase4?.researchBible?.enabled) {
 			await this.researchBible.initialize();
 		}
 
@@ -2285,9 +2242,6 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.addEditorExtension();
 		this.registerEditorExtension(this.editorExtensions);
 		this.addEvents();
-
-		// Setup Reading Mode post-processors
-		this.registerReadingModePostProcessors();
 
 		// Setup UI
 		this.setupStatusBar();
@@ -2512,4 +2466,3 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VALIDATION_PANEL_VIEW_TYPE);
 	}
 }
-import { ConcealPostProcessor } from './markdownPostProcessors/conceal-post-processor';

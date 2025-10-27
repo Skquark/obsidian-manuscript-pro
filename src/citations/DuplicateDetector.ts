@@ -20,7 +20,7 @@ export class DuplicateDetector {
 	/**
 	 * Find duplicate entries in bibliography
 	 */
-	findDuplicates(entries: Map<string, BibEntry | BibEntryEnhanced>, threshold: number = 0.8): DuplicateGroup[] {
+	findDuplicates(entries: Map<string, BibEntry | BibEntryEnhanced>, threshold = 0.8): DuplicateGroup[] {
 		const groups: DuplicateGroup[] = [];
 		const processed = new Set<string>();
 
