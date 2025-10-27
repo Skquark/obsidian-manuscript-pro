@@ -15,7 +15,7 @@ Obsidian Manuscript Pro is a comprehensive plugin for academic writing and manus
 ### Build Commands
 
 ```bash
-# Development build (watch mode)
+# Development build (watch mode) - builds to test-vault/
 npm run dev
 
 # Production build
@@ -24,9 +24,18 @@ npm run build
 # Copy main.js to root (required for plugin loading)
 npm run copy-main
 
+# Deploy to god-is-water-book vault for testing (THE COMMAND WE ALWAYS USE)
+npm run deploy
+
 # Type checking
 npm run check
 ```
+
+**IMPORTANT:** For testing changes in your actual vault, always use:
+```bash
+npm run deploy
+```
+This builds the plugin and deploys it to `C:\Projects\god-is-water-book\.obsidian\plugins\manuscript-pro\`. Then reload Obsidian (Ctrl+R) to see changes.
 
 ### Development Setup
 

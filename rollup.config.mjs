@@ -35,11 +35,12 @@ const DEV_PLUGIN_CONFIG = {
 const PROD_PLUGIN_CONFIG = {
 	...BASE_CONFIG,
 	output: {
-		dir: BUILD_DIR,
+		file: `${BUILD_DIR}/main.js`, // Single file output, no code splitting
 		sourcemap: 'inline',
 		sourcemapExcludeSources: true,
 		format: 'cjs',
 		exports: 'auto',
+		inlineDynamicImports: true, // Bundle everything into one file
 	},
 	plugins: getRollupPlugins(),
 };

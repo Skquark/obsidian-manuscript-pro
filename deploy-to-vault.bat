@@ -19,9 +19,9 @@ if not exist "%PLUGIN_DIR%" (
     mkdir "%PLUGIN_DIR%"
 )
 
-REM Copy only the required files
+REM Copy all build files and required files
 echo Copying plugin files...
-copy /Y "main.js" "%PLUGIN_DIR%\main.js"
+copy /Y "build\*.js" "%PLUGIN_DIR%\"
 copy /Y "manifest.json" "%PLUGIN_DIR%\manifest.json"
 copy /Y "styles.css" "%PLUGIN_DIR%\styles.css"
 
