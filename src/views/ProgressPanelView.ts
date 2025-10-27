@@ -93,15 +93,15 @@ export class ProgressPanelView extends ItemView {
 		const emptyState = this.containerEl.createDiv('progress-empty-state');
 		emptyState.createEl('div', {
 			cls: 'progress-empty-icon',
-			text: '📊'
+			text: '📊',
 		});
 		emptyState.createEl('h3', {
 			cls: 'progress-empty-title',
-			text: 'Progress Tracking Disabled'
+			text: 'Progress Tracking Disabled',
 		});
 		emptyState.createEl('p', {
 			cls: 'progress-empty-message',
-			text: 'Enable Progress Tracking in settings to track your writing progress.'
+			text: 'Enable Progress Tracking in settings to track your writing progress.',
 		});
 	}
 
@@ -110,21 +110,21 @@ export class ProgressPanelView extends ItemView {
 
 		header.createEl('h2', {
 			cls: 'progress-title',
-			text: 'Writing Progress'
+			text: 'Writing Progress',
 		});
 
 		const actions = header.createDiv('progress-header-actions');
 
 		const refreshBtn = actions.createEl('button', {
 			cls: 'progress-btn-icon',
-			attr: { 'aria-label': 'Refresh progress' }
+			attr: { 'aria-label': 'Refresh progress' },
 		});
 		refreshBtn.innerHTML = '🔄';
 		refreshBtn.addEventListener('click', () => this.render());
 
 		const menuBtn = actions.createEl('button', {
 			cls: 'progress-btn-icon',
-			attr: { 'aria-label': 'Progress menu' }
+			attr: { 'aria-label': 'Progress menu' },
 		});
 		menuBtn.innerHTML = '⋮';
 		menuBtn.addEventListener('click', (e) => this.showMenu(e));
@@ -137,13 +137,13 @@ export class ProgressPanelView extends ItemView {
 			{ value: 'today', label: 'Today' },
 			{ value: 'week', label: 'Week' },
 			{ value: 'month', label: 'Month' },
-			{ value: 'all', label: 'All Time' }
+			{ value: 'all', label: 'All Time' },
 		];
 
 		ranges.forEach(({ value, label }) => {
 			const tab = tabsContainer.createEl('button', {
 				cls: 'progress-tab',
-				text: label
+				text: label,
 			});
 
 			if (value === this.currentRange) {
@@ -184,12 +184,12 @@ export class ProgressPanelView extends ItemView {
 
 		card.createEl('div', {
 			cls: 'progress-card-value',
-			text: value
+			text: value,
 		});
 
 		card.createEl('div', {
 			cls: 'progress-card-label',
-			text: label
+			text: label,
 		});
 	}
 
@@ -199,35 +199,35 @@ export class ProgressPanelView extends ItemView {
 		const header = section.createDiv('progress-section-header');
 		header.createEl('h3', {
 			cls: 'progress-section-title',
-			text: '📊 Active Goals'
+			text: '📊 Active Goals',
 		});
 
 		if (goals.length === 0) {
 			const emptyState = section.createDiv('progress-goals-empty');
 			emptyState.createEl('p', {
 				cls: 'progress-empty-text',
-				text: 'No goals set yet'
+				text: 'No goals set yet',
 			});
 			emptyState.createEl('p', {
 				cls: 'progress-empty-subtext',
-				text: 'Set goals to track your writing progress and stay motivated'
+				text: 'Set goals to track your writing progress and stay motivated',
 			});
 
 			const addBtn = emptyState.createEl('button', {
 				cls: 'progress-btn-primary',
-				text: '+ Add Your First Goal'
+				text: '+ Add Your First Goal',
 			});
 			addBtn.addEventListener('click', () => this.showAddGoalModal());
 		} else {
 			const goalsList = section.createDiv('progress-goals-list');
 
-			goals.forEach(goal => {
+			goals.forEach((goal) => {
 				this.renderGoalItem(goalsList, goal);
 			});
 
 			const addBtn = section.createEl('button', {
 				cls: 'progress-btn-secondary',
-				text: '+ Add Goal'
+				text: '+ Add Goal',
 			});
 			addBtn.addEventListener('click', () => this.showAddGoalModal());
 		}
@@ -239,7 +239,7 @@ export class ProgressPanelView extends ItemView {
 		const header = item.createDiv('progress-goal-header');
 		header.createEl('span', {
 			cls: 'progress-goal-title',
-			text: `${goal.description}: ${goal.target.toLocaleString()} words`
+			text: `${goal.description}: ${goal.target.toLocaleString()} words`,
 		});
 
 		const progress = (goal.current / goal.target) * 100;
@@ -262,7 +262,7 @@ export class ProgressPanelView extends ItemView {
 
 		progressBar.createEl('span', {
 			cls: 'progress-goal-text',
-			text: progressText
+			text: progressText,
 		});
 	}
 
@@ -271,13 +271,13 @@ export class ProgressPanelView extends ItemView {
 
 		section.createEl('h3', {
 			cls: 'progress-section-title',
-			text: '📅 Recent Sessions'
+			text: '📅 Recent Sessions',
 		});
 
 		if (sessions.length === 0) {
 			section.createEl('p', {
 				cls: 'progress-empty-text',
-				text: 'No writing sessions yet'
+				text: 'No writing sessions yet',
 			});
 			return;
 		}
@@ -294,7 +294,7 @@ export class ProgressPanelView extends ItemView {
 		// Rows
 		const tableBody = table.createDiv('progress-sessions-body');
 
-		sessions.forEach(session => {
+		sessions.forEach((session) => {
 			const row = tableBody.createDiv('progress-session-row');
 
 			// Date
@@ -320,7 +320,7 @@ export class ProgressPanelView extends ItemView {
 		// View all link
 		const viewAll = section.createEl('button', {
 			cls: 'progress-link',
-			text: 'View All Sessions →'
+			text: 'View All Sessions →',
 		});
 		viewAll.addEventListener('click', () => this.showAllSessions());
 	}
@@ -330,13 +330,13 @@ export class ProgressPanelView extends ItemView {
 
 		const exportBtn = footer.createEl('button', {
 			cls: 'progress-btn-secondary',
-			text: 'Export CSV'
+			text: 'Export CSV',
 		});
 		exportBtn.addEventListener('click', () => this.exportToCSV());
 
 		const startBtn = footer.createEl('button', {
 			cls: 'progress-btn-primary',
-			text: 'Start New Session'
+			text: 'Start New Session',
 		});
 		startBtn.addEventListener('click', () => this.startNewSession());
 	}
@@ -352,7 +352,7 @@ export class ProgressPanelView extends ItemView {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		const todayWords = allSessions
-			.filter(s => new Date(s.startTime) >= today)
+			.filter((s) => new Date(s.startTime) >= today)
 			.reduce((sum, s) => sum + s.wordsWritten, 0);
 
 		// This week's words
@@ -360,14 +360,14 @@ export class ProgressPanelView extends ItemView {
 		weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 		weekStart.setHours(0, 0, 0, 0);
 		const weekWords = allSessions
-			.filter(s => new Date(s.startTime) >= weekStart)
+			.filter((s) => new Date(s.startTime) >= weekStart)
 			.reduce((sum, s) => sum + s.wordsWritten, 0);
 
 		// Average per day (last 30 days)
 		const thirtyDaysAgo = new Date();
 		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 		const recentWords = allSessions
-			.filter(s => new Date(s.startTime) >= thirtyDaysAgo)
+			.filter((s) => new Date(s.startTime) >= thirtyDaysAgo)
 			.reduce((sum, s) => sum + s.wordsWritten, 0);
 		const avgPerDay = recentWords / 30;
 
@@ -377,7 +377,7 @@ export class ProgressPanelView extends ItemView {
 			weekWords,
 			avgPerDay,
 			currentStreak: streak.currentStreak,
-			longestStreak: streak.longestStreak
+			longestStreak: streak.longestStreak,
 		};
 	}
 
@@ -412,10 +412,9 @@ export class ProgressPanelView extends ItemView {
 
 	private sessionMetGoal(session: WritingSession): boolean {
 		// Check if session met any daily goals
-		const dailyGoals = this.plugin.progressManager.getActiveGoals()
-			.filter(g => g.type === 'daily');
+		const dailyGoals = this.plugin.progressManager.getActiveGoals().filter((g) => g.type === 'daily');
 
-		return dailyGoals.some(goal => session.wordsWritten >= goal.target);
+		return dailyGoals.some((goal) => session.wordsWritten >= goal.target);
 	}
 
 	private showAddGoalModal(): void {
@@ -438,10 +437,10 @@ export class ProgressPanelView extends ItemView {
 
 		const lines: string[] = [
 			'Date,Duration (minutes),Words Written,File',
-			...sessions.map(s => {
+			...sessions.map((s) => {
 				const date = new Date(s.startTime).toLocaleDateString();
 				return `${date},${s.duration},${s.wordsWritten},"${s.file}"`;
-			})
+			}),
 		];
 
 		const csv = lines.join('\n');
@@ -451,7 +450,7 @@ export class ProgressPanelView extends ItemView {
 	}
 
 	private startNewSession(): void {
-		// Use the existing command
-		this.plugin.progressManager.startSession();
+		// Sessions are tracked automatically - just show a notice
+		console.log('Writing sessions are tracked automatically when you start writing');
 	}
 }

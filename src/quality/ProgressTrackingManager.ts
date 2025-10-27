@@ -321,6 +321,28 @@ export class ProgressTrackingManager {
 		return this.data.goals;
 	}
 
+	getActiveGoals(): WritingGoal[] {
+		const now = new Date();
+		return this.data.goals.filter((goal) => {
+			// Filter out goals that have passed their deadline
+			if (goal.deadline) {
+				return new Date(goal.deadline) >= now;
+			}
+			return true;
+		});
+	}
+
+	getAllSessions(): WritingSession[] {
+		return this.data.sessions;
+	}
+
+	getRecentSessions(count: number): WritingSession[] {
+		// Return the most recent sessions, sorted by start time descending
+		return [...this.data.sessions]
+			.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+			.slice(0, count);
+	}
+
 	private getCurrentTotalWords(): number {
 		// Sum all word counts from history or calculate from current document
 		const file = this.app.workspace.getActiveFile();
