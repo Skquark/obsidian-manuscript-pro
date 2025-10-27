@@ -497,22 +497,108 @@ export class PublicationChecklistManager {
 	}
 
 	private async checkCitationsInBibliography(): Promise<boolean> {
-		// Check if all citations are in bibliography
-		// Note: bibliographyManager doesn't have validateCitations method yet
-		// This would need to be implemented
-		return true; // Placeholder
+		// Check if all citations in document are in bibliography
+		const file = this.app.workspace.getActiveFile();
+		if (!file) return true;
+
+		try {
+			const content = await this.app.vault.read(file);
+
+			// Find all citation keys in the document using various citation formats
+			const citationPatterns = [
+				/@([a-zA-Z0-9_:-]+)/g, // Pandoc: @citationKey
+				/\\cite(?:\[[^\]]*\])?\{([^}]+)\}/g, // LaTeX: \cite{key} or \cite[p. 5]{key}
+				/\[@([a-zA-Z0-9_:-]+)(?:,\s*@[a-zA-Z0-9_:-]+)*\]/g, // Markdown: [@key1, @key2]
+			];
+
+			const citedKeys = new Set<string>();
+
+			for (const pattern of citationPatterns) {
+				let match;
+				while ((match = pattern.exec(content)) !== null) {
+					// Extract citation key from the match
+					const keys = match[1].split(/,\s*/);
+					keys.forEach((key) => {
+						// Clean up the key (remove @ prefix if present)
+						const cleanKey = key.trim().replace(/^@/, '');
+						if (cleanKey) citedKeys.add(cleanKey);
+					});
+				}
+			}
+
+			// Check if all cited keys exist in bibliography
+			const bibManager = this.plugin.bibliographyManager;
+			if (!bibManager) return true; // No bibliography manager available
+
+			for (const key of citedKeys) {
+				if (!bibManager.hasCitation(key)) {
+					console.warn(`Citation key "${key}" not found in bibliography`);
+					return false;
+				}
+			}
+
+			return true;
+		} catch (error) {
+			console.error('Error checking citations:', error);
+			return false;
+		}
 	}
 
 	private async checkUnusedBibEntries(): Promise<boolean> {
-		// Check if all bibliography entries are cited
-		// This would integrate with the bibliography manager
-		return true; // Placeholder
+		// Check if all bibliography entries are cited in document
+		const file = this.app.workspace.getActiveFile();
+		if (!file) return true;
+
+		try {
+			const content = await this.app.vault.read(file);
+			const bibManager = this.plugin.bibliographyManager;
+			if (!bibManager) return true;
+
+			// Get all citation keys from bibliography
+			const allBibEntries = bibManager.getAllCitations();
+
+			// Find all citations in document
+			const citationPatterns = [
+				/@([a-zA-Z0-9_:-]+)/g,
+				/\\cite(?:\[[^\]]*\])?\{([^}]+)\}/g,
+				/\[@([a-zA-Z0-9_:-]+)(?:,\s*@[a-zA-Z0-9_:-]+)*\]/g,
+			];
+
+			const citedKeys = new Set<string>();
+
+			for (const pattern of citationPatterns) {
+				let match;
+				while ((match = pattern.exec(content)) !== null) {
+					const keys = match[1].split(/,\s*/);
+					keys.forEach((key) => {
+						const cleanKey = key.trim().replace(/^@/, '');
+						if (cleanKey) citedKeys.add(cleanKey);
+					});
+				}
+			}
+
+			// Check if all bib entries are cited
+			let hasUnused = false;
+			for (const [key] of allBibEntries) {
+				if (!citedKeys.has(key)) {
+					console.warn(`Bibliography entry "${key}" is not cited in document`);
+					hasUnused = true;
+				}
+			}
+
+			// Return true if no unused entries (for checklist purposes, unused entries might be okay)
+			// You could change this to return false if you want to flag unused entries as a problem
+			return !hasUnused;
+		} catch (error) {
+			console.error('Error checking unused bibliography entries:', error);
+			return false;
+		}
 	}
 
 	private async checkOrphanedCitations(): Promise<boolean> {
-		// Check for citations without bibliography entries
-		// This would need custom implementation
-		return true; // Placeholder
+		// Check for citations without bibliography entries (same as checkCitationsInBibliography)
+		// This is essentially checking if there are orphaned citations
+		return await this.checkCitationsInBibliography();
 	}
 
 	private async checkFigureNumbering(): Promise<boolean> {
