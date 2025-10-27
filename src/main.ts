@@ -1939,7 +1939,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'start-writing-session',
 			name: 'Start Writing Session',
 			callback: async () => {
-				if (!this.settings.phase4?.progress?.enabled) {
+				if (!this.settings.quality?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -1959,7 +1959,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'end-writing-session',
 			name: 'End Writing Session',
 			callback: async () => {
-				if (!this.settings.phase4?.progress?.enabled) {
+				if (!this.settings.quality?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -1979,7 +1979,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'show-progress-stats',
 			name: 'Show Progress Statistics',
 			callback: async () => {
-				if (!this.settings.phase4?.progress?.enabled) {
+				if (!this.settings.quality?.progress?.enabled) {
 					new Notice('Progress Tracking is disabled in settings');
 					return;
 				}
@@ -2002,7 +2002,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'add-research-fact',
 			name: 'Add Research Fact',
 			callback: async () => {
-				if (!this.settings.phase4?.researchBible?.enabled) {
+				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2015,7 +2015,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'search-research-bible',
 			name: 'Search Research Bible',
 			callback: async () => {
-				if (!this.settings.phase4?.researchBible?.enabled) {
+				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2028,7 +2028,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'check-terminology-consistency',
 			name: 'Check Terminology Consistency',
 			callback: async () => {
-				if (!this.settings.phase4?.researchBible?.enabled) {
+				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
@@ -2055,12 +2055,12 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-glossary',
 			name: 'Export Glossary',
 			callback: async () => {
-				if (!this.settings.phase4?.researchBible?.enabled) {
+				if (!this.settings.quality?.researchBible?.enabled) {
 					new Notice('Research Bible is disabled in settings');
 					return;
 				}
 
-				const format = this.settings.phase4.researchBible.exportFormat || 'markdown';
+				const format = this.settings.quality.researchBible.exportFormat || 'markdown';
 				const glossary = this.researchBible.exportGlossary(format);
 
 				new Notice(`Glossary exported to console as ${format}`);
@@ -2073,7 +2073,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-readability',
 			name: 'Analyze Document Readability',
 			callback: async () => {
-				if (!this.settings.phase4?.readability?.enabled) {
+				if (!this.settings.quality?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2095,7 +2095,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'analyze-section-readability',
 			name: 'Analyze Section Readability',
 			callback: async () => {
-				if (!this.settings.phase4?.readability?.enabled) {
+				if (!this.settings.quality?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2118,7 +2118,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			id: 'export-readability-report',
 			name: 'Export Readability Report',
 			callback: async () => {
-				if (!this.settings.phase4?.readability?.enabled) {
+				if (!this.settings.quality?.readability?.enabled) {
 					new Notice('Readability Analysis is disabled in settings');
 					return;
 				}
@@ -2209,13 +2209,13 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.researchBible = new ResearchBibleManager(this);
 		this.readabilityAnalyzer = new ReadabilityAnalyzer(this);
 
-		if (this.settings.phase4?.checklist?.enabled) {
+		if (this.settings.quality?.checklist?.enabled) {
 			await this.checklistManager.initialize();
 		}
-		if (this.settings.phase4?.progress?.enabled) {
+		if (this.settings.quality?.progress?.enabled) {
 			await this.progressManager.initialize();
 		}
-		if (this.settings.phase4?.researchBible?.enabled) {
+		if (this.settings.quality?.researchBible?.enabled) {
 			await this.researchBible.initialize();
 		}
 
