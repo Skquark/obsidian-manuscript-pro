@@ -36,6 +36,8 @@ import { PublicationChecklistManager } from './quality/PublicationChecklistManag
 import { ProgressTrackingManager } from './quality/ProgressTrackingManager';
 import { ResearchBibleManager } from './quality/ResearchBibleManager';
 import { ReadabilityAnalyzer } from './quality/ReadabilityAnalyzer';
+import { ResearchFactModal } from './modals/ResearchFactModal';
+import { ResearchSearchModal } from './modals/ResearchSearchModal';
 
 // Default Settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -2009,9 +2011,7 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				// This would open a modal for inputting fact details
-				// For now, just show a notice
-				new Notice('Research fact input modal coming soon');
+				new ResearchFactModal(this.app, this).open();
 			},
 		});
 
@@ -2024,8 +2024,7 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				// This would open a search modal
-				new Notice('Research Bible search modal coming soon');
+				new ResearchSearchModal(this.app, this).open();
 			},
 		});
 

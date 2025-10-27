@@ -7,6 +7,8 @@ import { PageWriter } from './layout.js';
 
 type Element = 'Scene'|'Action'|'Character'|'Parenthetical'|'Dialogue'|'Transition'|'Lyrics'|'Unknown';
 
+function inToPt(inches: number): number { return Math.max(0, inches) * 72; }
+
 function parseTitlePage(text: string): { consumedLines: number; meta: Record<string,string> } {
   const meta: Record<string,string> = {};
   const lines = text.split(/\r?\n/);
@@ -16,16 +18,12 @@ function parseTitlePage(text: string): { consumedLines: number; meta: Record<str
     if (!ln.trim()) { i++; continue; }
     const m = ln.match(/^([A-Za-z ]+):\s*(.*)$/);
     if (!m) break;
-    const key = m[1].trim();
-    const val = m[2].trim();
-    meta[key] = val;
+    const key = m[1].trim(); meta[key] = (m[2] || '').trim();
     i++;
   }
   if (!meta['Title']) return { consumedLines: 0, meta: {} };
   return { consumedLines: i, meta };
 }
-
-function inToPt(inches: number): number { return Math.max(0, inches) * 72; }
 
 export async function exportFountainPdf(app: App, settings?: FountainEditorSettings): Promise<string | null> {
   try {
@@ -38,9 +36,8 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
     const os = require('os');
     const outPath = path.join(os.tmpdir(), `fountain-export-${Date.now()}.pdf`);
     const pdf: PdfOptions | undefined = settings?.pdf;
-    const pageSize = pdf?.pageSize || 'LETTER';
     const doc = new PDFDocument({
-      size: pageSize,
+      size: pdf?.pageSize || 'LETTER',
       margins: {
         top: inToPt(pdf?.marginTopIn ?? 1),
         bottom: inToPt(pdf?.marginBottomIn ?? 1),
@@ -52,26 +49,26 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
     doc.pipe(stream);
     if (pdf?.fontPath) { try { doc.font(pdf.fontPath); } catch { doc.font('Courier'); } } else { doc.font('Courier'); }
     doc.fontSize(pdf?.fontSize ?? 12);
-    if ((pdf?.lineGap ?? 0) > 0) (doc as any).lineGap = pdf?.lineGap;
 
-    const writer = new PageWriter(doc, {
-      indentParentheticalPt: inToPt(pdf?.indentParentheticalIn ?? 0.5),
-      indentDialoguePt: inToPt(pdf?.indentDialogueIn ?? 1.5),
-      dualGutterPt: inToPt(pdf?.dualGutterIn ?? 0.33),
-    });
-
-    // Geometry helpers
     const page: any = (doc as any).page;
     const margins = page.margins;
     const printableWidth = page.width - margins.left - margins.right;
     const pageBottomY = page.height - margins.bottom;
+    const colWidth = (printableWidth - inToPt(pdf?.dualGutterIn ?? 0.33)) / 2;
+    const leftColX = margins.left + inToPt(pdf?.indentDialogueIn ?? 1.5) - 36;
+    const rightColX = leftColX + colWidth + inToPt(pdf?.dualGutterIn ?? 0.33);
 
     const drawMoreFooter = () => {
       if (settings?.pdf?.showMore) {
-        const more = '(MORE)';
         const y = pageBottomY - doc.currentLineHeight();
-        doc.text(more, margins.left, y, { width: printableWidth, align: 'right' });
+        doc.text('(MORE)', margins.left, y, { width: printableWidth, align: 'right' });
       }
+    };
+    const drawMoreFooterDual = (hasLeft: boolean, hasRight: boolean) => {
+      if (!settings?.pdf?.showMore) return;
+      const y = pageBottomY - doc.currentLineHeight();
+      if (hasLeft) doc.text('(MORE)', leftColX, y, { width: colWidth, align: 'right' });
+      if (hasRight) doc.text('(MORE)', rightColX, y, { width: colWidth, align: 'right' });
     };
 
     // Title page
@@ -86,7 +83,20 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
       doc.addPage();
     }
 
+    const writer = new PageWriter(doc, {
+      indentParentheticalPt: inToPt(pdf?.indentParentheticalIn ?? 0.5),
+      indentDialoguePt: inToPt(pdf?.indentDialogueIn ?? 1.5),
+      dualGutterPt: inToPt(pdf?.dualGutterIn ?? 0.33),
+    });
+
     const lines = text.split(/\r?\n/).slice(consumedLines);
+    const minLines = settings?.pdf?.minBlockLines ?? 2;
+    const measureLine = (d: string) => {
+      const kind = classifyLine(d) as Element;
+      const indentPt = (kind === 'Parenthetical') ? inToPt(pdf?.indentParentheticalIn ?? 0.5) : inToPt(pdf?.indentDialogueIn ?? 1.5);
+      const width = printableWidth - indentPt;
+      return doc.heightOfString((d || ' ').trim() || ' ', { width });
+    };
 
     const collectBlock = (startIndex: number): { lines: string[]; next: number } => {
       const acc: string[] = [];
@@ -95,14 +105,45 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
         const t = lines[i] ?? '';
         const e = classifyLine(t) as Element;
         if (!t.trim()) break;
-        if (e === 'Dialogue' || e === 'Parenthetical' || (e === 'Action' && t.startsWith(' '))) {
-          acc.push(t);
-          i++;
-          continue;
-        }
+        if (e === 'Dialogue' || e === 'Parenthetical' || (e === 'Action' && t.startsWith(' '))) { acc.push(t); i++; continue; }
         break;
       }
       return { lines: acc, next: i };
+    };
+
+    const renderDual = (leftName: string, leftLines: string[], rightName: string, rightLines: string[]) => {
+      let lIdx = 0, rIdx = 0;
+      let leftContd = false, rightContd = false;
+      while (lIdx < leftLines.length || rIdx < rightLines.length) {
+        const space = pageBottomY - (doc as any).y;
+        // estimate name heights
+        const nameL = (leftContd && settings?.pdf?.showContd) ? `${leftName} (CONT’D)` : leftName;
+        const nameR = (rightContd && settings?.pdf?.showContd) ? (rightName ? `${rightName} (CONT’D)` : '') : rightName;
+        const nameLH = doc.heightOfString(nameL.toUpperCase(), { width: colWidth });
+        const nameRH = doc.heightOfString((nameR||'').toUpperCase(), { width: colWidth });
+        if (space < Math.min(nameLH, nameRH)) { drawMoreFooterDual(lIdx<leftLines.length, rIdx<rightLines.length); doc.addPage(); leftContd = rightContd = true; continue; }
+        // Greedy fill while space suffices
+        let kL = 0, kR = 0; let hL = nameLH, hR = nameRH;
+        while (true) {
+          const canL = (lIdx + kL) < leftLines.length;
+          const canR = (rIdx + kR) < rightLines.length;
+          if (!canL && !canR) break;
+          const addLeft = canL && (!canR || hL <= hR);
+          if (addLeft) {
+            const h = doc.heightOfString(leftLines[lIdx + kL] || ' ', { width: colWidth });
+            if (Math.max(hL + h, hR) + 6 > space) break;
+            hL += h; kL++;
+          } else {
+            const h = doc.heightOfString(rightLines[rIdx + kR] || ' ', { width: colWidth });
+            if (Math.max(hR + h, hL) + 6 > space) break;
+            hR += h; kR++;
+          }
+        }
+        if (kL === 0 && kR === 0) { drawMoreFooterDual(lIdx<leftLines.length, rIdx<rightLines.length); doc.addPage(); leftContd = rightContd = true; continue; }
+        new PageWriter(doc).dualDialogue(nameL, leftLines.slice(lIdx, lIdx + kL), nameR||'', rightLines.slice(rIdx, rIdx + kR));
+        lIdx += kL; rIdx += kR;
+        if (lIdx < leftLines.length || rIdx < rightLines.length) { drawMoreFooterDual(lIdx<leftLines.length, rIdx<rightLines.length); doc.addPage(); leftContd = rightContd = true; }
+      }
     };
 
     let sceneNo = 0;
@@ -112,67 +153,37 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
       if (el === 'Scene') {
         sceneNo += 1;
         if (settings?.pdf?.sceneNumbers) {
-          if ((settings.pdf.sceneNumberPosition || 'inline') === 'inline') writer.sceneHeading(raw, sceneNo);
+          const pos = settings.pdf.sceneNumberPosition || 'inline';
+          const style = settings.pdf.sceneNumberStyle || 'plain';
+          if (pos === 'inline') writer.sceneHeading(raw, sceneNo);
           else {
             writer.sceneHeading(raw, undefined);
             const y = (doc as any).y - doc.currentLineHeight();
-            let num = String(sceneNo);
-            if ((settings?.pdf?.sceneNumberStyle || 'plain') === 'parentheses') num = `(${num})`;
+            const num = style === 'parentheses' ? `(${sceneNo})` : String(sceneNo);
             doc.text(num, margins.left - 30, y, { width: 24, align: 'left' });
             doc.text(num, page.width - margins.right + 6, y, { width: 24, align: 'left' });
           }
-        } else {
-          writer.sceneHeading(raw, undefined);
-        }
+        } else writer.sceneHeading(raw, undefined);
         continue;
       }
       if (el === 'Character') {
         const isDual = /\^\s*$/.test(raw) || /\^\s*$/.test((lines[idx+2] || ''));
         const name = raw.replace(/^@/, '').replace(/\^\s*$/, '');
         if (isDual) {
-          // Pre-measure both columns and apply MORE/CONT’D if needed
           const leftBlock = collectBlock(idx + 1);
           let j = leftBlock.next; while (j < lines.length && !lines[j].trim()) j++;
           let rightName = '';
           let rightBlock: {lines:string[]; next:number} = { lines: [], next: j };
-          if (j < lines.length && /^@/.test(lines[j] || '')) {
-            rightName = (lines[j] || '').replace(/^@/, '').replace(/\^\s*$/, '');
-            rightBlock = collectBlock(j + 1);
-          }
-          const colWidth = (printableWidth - inToPt(pdf?.dualGutterIn ?? 0.33)) / 2;
-          const heightFor = (title: string, arr: string[]) => {
-            const block = [title.toUpperCase(), ...arr].join('\n');
-            return doc.heightOfString(block, { width: colWidth });
-          };
-          const needed = Math.max(heightFor(name, leftBlock.lines), heightFor(rightName || name, rightBlock.lines)) + 6;
-          if (((doc as any).y + needed) > pageBottomY) {
-            if (settings?.pdf?.showMore) drawMoreFooter();
-            doc.addPage();
-            const leftName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
-            const rightNameContd = rightName ? (settings?.pdf?.showContd ? `${rightName} (CONT’D)` : rightName) : '';
-            new PageWriter(doc).dualDialogue(leftName, leftBlock.lines, rightNameContd, rightBlock.lines);
-          } else {
-            new PageWriter(doc).dualDialogue(name, leftBlock.lines, rightName || '', rightBlock.lines);
-          }
+          if (j < lines.length && /^@/.test(lines[j] || '')) { rightName = (lines[j] || '').replace(/^@/, '').replace(/\^\s*$/, ''); rightBlock = collectBlock(j + 1); }
+          renderDual(name, leftBlock.lines, rightName, rightBlock.lines);
           idx = Math.max(leftBlock.next, rightBlock.next) - 1;
           continue;
         }
-
-        // Dialogue block (single)
         const block = collectBlock(idx + 1);
-        const minLines = settings?.pdf?.minBlockLines ?? 2;
-        const measureLine = (d: string) => {
-          const kind = classifyLine(d) as Element;
-          const indentPt = (kind === 'Parenthetical') ? inToPt(pdf?.indentParentheticalIn ?? 0.5) : inToPt(pdf?.indentDialogueIn ?? 1.5);
-          const width = printableWidth - indentPt;
-          return doc.heightOfString((d || ' ').trim() || ' ', { width });
-        };
         const nameHeight = doc.heightOfString(name.toUpperCase(), { width: printableWidth, align: 'center' });
         let firstNHeight = 0;
         for (let j2 = 0; j2 < Math.min(minLines, block.lines.length); j2++) firstNHeight += measureLine(block.lines[j2]);
-        if (((doc as any).y + doc.currentLineHeight() + nameHeight + firstNHeight) > pageBottomY) {
-          doc.addPage();
-        }
+        if (((doc as any).y + doc.currentLineHeight() + nameHeight + firstNHeight) > pageBottomY) doc.addPage();
         writer.character(name);
         let linesWritten = 0;
         for (let j2 = 0; j2 < block.lines.length; j2++) {
@@ -184,15 +195,14 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
               const contdName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
               writer.character(contdName);
             } else {
-              if (settings?.pdf?.showMore) drawMoreFooter();
+              drawMoreFooter();
               doc.addPage();
               const contdName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
               writer.character(contdName);
             }
           }
           const kind = classifyLine(d) as Element;
-          if (kind === 'Parenthetical') writer.parenthetical(d);
-          else writer.dialogue(d);
+          if (kind === 'Parenthetical') writer.parenthetical(d); else writer.dialogue(d);
           linesWritten++;
         }
         idx = block.next - 1;
