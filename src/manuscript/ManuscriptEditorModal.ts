@@ -763,7 +763,11 @@ export class ManuscriptEditorModal extends Modal {
 		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel', cls: 'mod-cancel' });
 		cancelBtn.onclick = () => {
 			if (this.hasUnsavedChanges) {
-				// TODO: Add confirmation dialog
+				// Show confirmation dialog for unsaved changes
+				const confirmed = confirm('You have unsaved changes. Are you sure you want to close without saving?');
+				if (!confirmed) {
+					return; // Don't close if user cancels
+				}
 			}
 			this.close();
 		};

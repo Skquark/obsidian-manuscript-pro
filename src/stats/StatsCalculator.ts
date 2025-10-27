@@ -288,7 +288,8 @@ export class StatsCalculator {
 		// Count equations
 		const displayEq = (this.content.match(/\$\$[\s\S]*?\$\$/g) || []).length;
 		const numberedEq = (this.content.match(/\\begin\{equation\}/g) || []).length;
-		const equations = displayEq + numberedEq;
+		const inlineEq = (this.content.match(/\$[^$\n]+?\$/g) || []).length;
+		const equations = displayEq + numberedEq + inlineEq;
 
 		// Count index entries
 		const indexEntries = (this.content.match(/\\index\{[^}]+\}/g) || []).length;

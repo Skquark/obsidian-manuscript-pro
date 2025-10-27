@@ -99,6 +99,7 @@ export class APAStyle implements CitationStyle {
 
 	private formatBook(entry: BibEntry, authors: string, year: string, title: string): string {
 		const publisher = entry.fields.get('publisher') || '';
+		const address = entry.fields.get('address') || '';
 		const edition = entry.fields.get('edition') || '';
 
 		let citation = `${authors} (${year}). <em>${title}</em>`;
@@ -107,7 +108,10 @@ export class APAStyle implements CitationStyle {
 			citation += ` (${edition} ed.)`;
 		}
 
-		if (publisher) {
+		// Format publisher with location if available (Chicago style)
+		if (address && publisher) {
+			citation += `. ${address}: ${publisher}`;
+		} else if (publisher) {
 			citation += `. ${publisher}`;
 		}
 
