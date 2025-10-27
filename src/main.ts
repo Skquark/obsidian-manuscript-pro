@@ -1906,10 +1906,11 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				this.checklistManager.getChecklist(activeFile);
+				const checklist = this.checklistManager.getChecklist(activeFile);
 				const markdown = this.checklistManager.exportAsMarkdown(activeFile.path);
 
 				// Create a modal or panel to display the checklist
+				// TODO: Display checklist object in UI panel instead of console
 				new Notice('Checklist exported to console (UI panel coming soon)');
 				console.log(markdown);
 			},

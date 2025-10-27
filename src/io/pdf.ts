@@ -60,6 +60,20 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
       dualGutterPt: inToPt(pdf?.dualGutterIn ?? 0.33),
     });
 
+    // Geometry helpers
+    const page: any = (doc as any).page;
+    const margins = page.margins;
+    const printableWidth = page.width - margins.left - margins.right;
+    const pageBottomY = page.height - margins.bottom;
+
+    const drawMoreFooter = () => {
+      if (settings?.pdf?.showMore) {
+        const more = '(MORE)';
+        const y = pageBottomY - doc.currentLineHeight();
+        doc.text(more, margins.left, y, { width: printableWidth, align: 'right' });
+      }
+    };
+
     // Title page
     const { consumedLines, meta } = parseTitlePage(text);
     if (consumedLines > 0) {
@@ -91,11 +105,6 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
       return { lines: acc, next: i };
     };
 
-    const page = (doc as any).page;
-    const margins = page.margins;
-    const printableWidth = page.width - margins.left - margins.right;
-    const pageBottomY = page.height - margins.bottom;
-
     let sceneNo = 0;
     for (let idx = 0; idx < lines.length; idx++) {
       const raw = lines[idx] ?? '';
@@ -106,11 +115,11 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
           if ((settings.pdf.sceneNumberPosition || 'inline') === 'inline') writer.sceneHeading(raw, sceneNo);
           else {
             writer.sceneHeading(raw, undefined);
-            const p: any = (doc as any).page; const m = p.margins; const width = p.width;
             const y = (doc as any).y - doc.currentLineHeight();
-            const num = String(sceneNo);
-            doc.text(num, m.left - 30, y, { width: 24, align: 'left' });
-            doc.text(num, width - m.right + 6, y, { width: 24, align: 'left' });
+            let num = String(sceneNo);
+            if ((settings?.pdf?.sceneNumberStyle || 'plain') === 'parentheses') num = `(${num})`;
+            doc.text(num, margins.left - 30, y, { width: 24, align: 'left' });
+            doc.text(num, page.width - margins.right + 6, y, { width: 24, align: 'left' });
           }
         } else {
           writer.sceneHeading(raw, undefined);
@@ -121,41 +130,70 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
         const isDual = /\^\s*$/.test(raw) || /\^\s*$/.test((lines[idx+2] || ''));
         const name = raw.replace(/^@/, '').replace(/\^\s*$/, '');
         if (isDual) {
-          const leftName = name;
+          // Pre-measure both columns and apply MORE/CONT’D if needed
           const leftBlock = collectBlock(idx + 1);
-          let j = leftBlock.next;
-          while (j < lines.length && !lines[j].trim()) j++;
+          let j = leftBlock.next; while (j < lines.length && !lines[j].trim()) j++;
           let rightName = '';
           let rightBlock: {lines:string[]; next:number} = { lines: [], next: j };
           if (j < lines.length && /^@/.test(lines[j] || '')) {
             rightName = (lines[j] || '').replace(/^@/, '').replace(/\^\s*$/, '');
             rightBlock = collectBlock(j + 1);
           }
-          writer.dualDialogue(leftName, leftBlock.lines, rightName, rightBlock.lines);
+          const colWidth = (printableWidth - inToPt(pdf?.dualGutterIn ?? 0.33)) / 2;
+          const heightFor = (title: string, arr: string[]) => {
+            const block = [title.toUpperCase(), ...arr].join('\n');
+            return doc.heightOfString(block, { width: colWidth });
+          };
+          const needed = Math.max(heightFor(name, leftBlock.lines), heightFor(rightName || name, rightBlock.lines)) + 6;
+          if (((doc as any).y + needed) > pageBottomY) {
+            if (settings?.pdf?.showMore) drawMoreFooter();
+            doc.addPage();
+            const leftName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
+            const rightNameContd = rightName ? (settings?.pdf?.showContd ? `${rightName} (CONT’D)` : rightName) : '';
+            new PageWriter(doc).dualDialogue(leftName, leftBlock.lines, rightNameContd, rightBlock.lines);
+          } else {
+            new PageWriter(doc).dualDialogue(name, leftBlock.lines, rightName || '', rightBlock.lines);
+          }
           idx = Math.max(leftBlock.next, rightBlock.next) - 1;
           continue;
         }
-        // Measure block and apply simple widow/orphan avoidance: move entire block if it won't fit
+
+        // Dialogue block (single)
         const block = collectBlock(idx + 1);
-        const lineH = doc.currentLineHeight();
-        const nameHeight = doc.heightOfString(name.toUpperCase(), { width: printableWidth, align: 'center' });
-        let blockHeight = 0;
-        for (const d of block.lines) {
+        const minLines = settings?.pdf?.minBlockLines ?? 2;
+        const measureLine = (d: string) => {
           const kind = classifyLine(d) as Element;
           const indentPt = (kind === 'Parenthetical') ? inToPt(pdf?.indentParentheticalIn ?? 0.5) : inToPt(pdf?.indentDialogueIn ?? 1.5);
           const width = printableWidth - indentPt;
-          blockHeight += doc.heightOfString((d || ' ').trim() || ' ', { width });
-        }
-        // include a blank line before character and a small gap after heading
-        const required = lineH + nameHeight + blockHeight;
-        if (((doc as any).y + required) > pageBottomY) {
+          return doc.heightOfString((d || ' ').trim() || ' ', { width });
+        };
+        const nameHeight = doc.heightOfString(name.toUpperCase(), { width: printableWidth, align: 'center' });
+        let firstNHeight = 0;
+        for (let j2 = 0; j2 < Math.min(minLines, block.lines.length); j2++) firstNHeight += measureLine(block.lines[j2]);
+        if (((doc as any).y + doc.currentLineHeight() + nameHeight + firstNHeight) > pageBottomY) {
           doc.addPage();
         }
         writer.character(name);
-        for (const d of block.lines) {
+        let linesWritten = 0;
+        for (let j2 = 0; j2 < block.lines.length; j2++) {
+          const d = block.lines[j2];
+          const h = measureLine(d);
+          if (((doc as any).y + h) > pageBottomY) {
+            if (linesWritten < minLines) {
+              doc.addPage();
+              const contdName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
+              writer.character(contdName);
+            } else {
+              if (settings?.pdf?.showMore) drawMoreFooter();
+              doc.addPage();
+              const contdName = settings?.pdf?.showContd ? `${name} (CONT’D)` : name;
+              writer.character(contdName);
+            }
+          }
           const kind = classifyLine(d) as Element;
           if (kind === 'Parenthetical') writer.parenthetical(d);
           else writer.dialogue(d);
+          linesWritten++;
         }
         idx = block.next - 1;
         continue;
@@ -168,10 +206,11 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
 
     doc.end();
     await new Promise<void>((resolve) => stream.on('finish', () => resolve()));
-    try { await shell.openPath(outPath); } catch { /* ignore open errors */ }
+    try { await shell.openPath(outPath); } catch {}
     return outPath;
   } catch (e) {
     console.error('Fountain PDF export failed', e);
     return null;
   }
 }
+
