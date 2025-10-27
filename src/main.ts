@@ -38,6 +38,7 @@ import { ResearchBibleManager } from './quality/ResearchBibleManager';
 import { ReadabilityAnalyzer } from './quality/ReadabilityAnalyzer';
 import { ResearchFactModal } from './modals/ResearchFactModal';
 import { ResearchSearchModal } from './modals/ResearchSearchModal';
+import { ChecklistPanelView, CHECKLIST_PANEL_VIEW_TYPE } from './views/ChecklistPanelView';
 
 // Default Settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -1908,13 +1909,8 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				const checklist = this.checklistManager.getChecklist(activeFile);
-				const markdown = this.checklistManager.exportAsMarkdown(activeFile.path);
-
-				// Create a modal or panel to display the checklist
-				// TODO: Display checklist object in UI panel instead of console
-				new Notice('Checklist exported to console (UI panel coming soon)');
-				console.log(markdown);
+				// Activate or reveal the checklist panel
+				await this.activateChecklistPanel();
 			},
 		});
 
@@ -2235,6 +2231,9 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Register validation panel view
 		this.registerView(VALIDATION_PANEL_VIEW_TYPE, (leaf: WorkspaceLeaf) => new PrePublicationPanel(leaf, this));
 
+		// Register Checklist Panel View
+		this.registerView(CHECKLIST_PANEL_VIEW_TYPE, (leaf: WorkspaceLeaf) => new ChecklistPanelView(leaf, this));
+
 		// Register commands
 		this.registerCommands();
 
@@ -2362,6 +2361,39 @@ export default class ManuscriptProPlugin extends Plugin {
 		}
 	}
 
+	async activateChecklistPanel() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(CHECKLIST_PANEL_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: CHECKLIST_PANEL_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create checklist panel in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
 	async activateManuscriptNavigator() {
 		const { workspace } = this.app;
 
@@ -2464,5 +2496,6 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(LABEL_BROWSER_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(MANUSCRIPT_NAVIGATOR_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(VALIDATION_PANEL_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(CHECKLIST_PANEL_VIEW_TYPE);
 	}
 }

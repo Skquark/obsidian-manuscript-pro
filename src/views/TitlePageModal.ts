@@ -52,8 +52,24 @@ export class TitlePageModal extends Modal {
     this.fields.draftDate = meta['Draft date'] || (this.plugin.settings.titleDefaults?.draftDate || '');
     this.fields.contact = meta['Contact'] || (this.plugin.settings.titleDefaults?.contact || '');
 
+    const preview = contentEl.createEl('pre');
+    preview.style.background = 'var(--background-secondary)';
+    preview.style.padding = '8px';
+    preview.style.whiteSpace = 'pre-wrap';
+    const updatePreview = () => {
+      const meta: Record<string,string> = {
+        'Title': this.fields.title,
+        'Credit': this.fields.credit,
+        'Author': this.fields.author,
+        'Draft date': this.fields.draftDate,
+        'Contact': this.fields.contact,
+      };
+      preview.textContent = buildTitlePage(meta);
+      if (applyBtn) (applyBtn as any).setDisabled(!this.fields.title.trim());
+    };
+
     const makeRow = (name: string, key: keyof typeof this.fields, ph: string) =>
-      new Setting(contentEl).setName(name).addText((t) => t.setPlaceholder(ph).setValue(this.fields[key] || '').onChange((v)=>{ (this.fields as any)[key] = v; }));
+      new Setting(contentEl).setName(name).addText((t) => t.setPlaceholder(ph).setValue(this.fields[key] || '').onChange((v)=>{ (this.fields as any)[key] = v; updatePreview(); }));
 
     makeRow('Title', 'title', 'My Screenplay');
     makeRow('Credit', 'credit', 'Written by');
@@ -64,9 +80,10 @@ export class TitlePageModal extends Modal {
     let saveDefaults = false;
     new Setting(contentEl).setName('Save as defaults').addToggle((tg)=>tg.setValue(false).onChange((v)=>saveDefaults=v));
 
-    new Setting(contentEl)
+    let applyBtn: any = null;
+    const btnRow = new Setting(contentEl)
       .addButton((b)=> b.setButtonText('Cancel').onClick(()=> this.close()))
-      .addButton((b)=> b.setCta().setButtonText('Apply').onClick(async ()=>{
+      .addButton((b)=> { applyBtn = b.setCta().setButtonText('Apply').onClick(async ()=>{
         try {
           const newMeta: Record<string,string> = {
             'Title': this.fields.title,
@@ -100,7 +117,7 @@ export class TitlePageModal extends Modal {
           console.error(e);
           new Notice('Failed to apply title page');
         }
-      }));
+      }); });
+    updatePreview();
   }
 }
-

@@ -158,10 +158,34 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
           if (pos === 'inline') writer.sceneHeading(raw, sceneNo);
           else {
             writer.sceneHeading(raw, undefined);
-            const y = (doc as any).y - doc.currentLineHeight();
-            const num = style === 'parentheses' ? `(${sceneNo})` : String(sceneNo);
-            doc.text(num, margins.left - 30, y, { width: 24, align: 'left' });
-            doc.text(num, page.width - margins.right + 6, y, { width: 24, align: 'left' });
+            const y = (doc as any).y - doc.currentLineHeight() + inToPt(settings.pdf.marginNumberOffsetYIn ?? 0);
+            const leftX = margins.left - 30 + inToPt(settings.pdf.marginNumberOffsetXInLeft ?? 0);
+            const rightX = page.width - margins.right + 6 + inToPt(settings.pdf.marginNumberOffsetXInRight ?? 0);
+            if (style === 'circled' && sceneNo > 20) {
+              // Draw simple circles with centered numbers (fallback for > 20)
+              const r = 9;
+              const leftCx = leftX + r;
+              const rightCx = rightX + r;
+              const cy = y + r; // roughly center vertically
+              const str = String(sceneNo);
+              // Left circle + center text
+              doc.circle(leftCx, cy, r).stroke();
+              const twL = doc.widthOfString(str);
+              const txL = leftCx - twL / 2;
+              const tyL = cy - (doc.currentLineHeight() / 2) + 2;
+              doc.text(str, txL, tyL);
+              // Right circle + center text
+              doc.circle(rightCx, cy, r).stroke();
+              const twR = doc.widthOfString(str);
+              const txR = rightCx - twR / 2;
+              const tyR = cy - (doc.currentLineHeight() / 2) + 2;
+              doc.text(str, txR, tyR);
+            } else {
+              const circ = ['⓪','①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+              const numText = style === 'parentheses' ? `(${sceneNo})` : style === 'circled' ? (sceneNo<=20? circ[sceneNo] : `(${sceneNo})`) : String(sceneNo);
+              doc.text(numText, leftX, y, { width: 24, align: 'left' });
+              doc.text(numText, rightX, y, { width: 24, align: 'left' });
+            }
           }
         } else writer.sceneHeading(raw, undefined);
         continue;
@@ -223,4 +247,3 @@ export async function exportFountainPdf(app: App, settings?: FountainEditorSetti
     return null;
   }
 }
-
