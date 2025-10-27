@@ -39,6 +39,7 @@ import { ReadabilityAnalyzer } from './quality/ReadabilityAnalyzer';
 import { ResearchFactModal } from './modals/ResearchFactModal';
 import { ResearchSearchModal } from './modals/ResearchSearchModal';
 import { ChecklistPanelView, CHECKLIST_PANEL_VIEW_TYPE } from './views/ChecklistPanelView';
+import { ProgressPanelView, PROGRESS_PANEL_VIEW_TYPE } from './views/ProgressPanelView';
 
 // Default Settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -1984,16 +1985,8 @@ export default class ManuscriptProPlugin extends Plugin {
 					return;
 				}
 
-				const streak = this.progressManager.getStreak();
-				const velocity = this.progressManager.getVelocity();
-				const goals = this.progressManager.getGoals();
-				const csv = this.progressManager.exportToCSV();
-
-				new Notice('Progress stats exported to console (UI panel coming soon)');
-				console.log('Streak:', streak);
-				console.log('Velocity:', velocity);
-				console.log('Goals:', goals);
-				console.log('CSV Export:', csv);
+				// Activate or reveal the progress panel
+				await this.activateProgressPanel();
 			},
 		});
 
@@ -2234,6 +2227,9 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Register Checklist Panel View
 		this.registerView(CHECKLIST_PANEL_VIEW_TYPE, (leaf: WorkspaceLeaf) => new ChecklistPanelView(leaf, this));
 
+		// Register Progress Panel View
+		this.registerView(PROGRESS_PANEL_VIEW_TYPE, (leaf: WorkspaceLeaf) => new ProgressPanelView(leaf, this));
+
 		// Register commands
 		this.registerCommands();
 
@@ -2394,6 +2390,39 @@ export default class ManuscriptProPlugin extends Plugin {
 		}
 	}
 
+	async activateProgressPanel() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(PROGRESS_PANEL_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: PROGRESS_PANEL_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create progress panel in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
 	async activateManuscriptNavigator() {
 		const { workspace } = this.app;
 
@@ -2497,5 +2526,6 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(MANUSCRIPT_NAVIGATOR_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(VALIDATION_PANEL_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(CHECKLIST_PANEL_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(PROGRESS_PANEL_VIEW_TYPE);
 	}
 }
