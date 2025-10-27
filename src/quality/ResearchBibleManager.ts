@@ -158,6 +158,26 @@ export class ResearchBibleManager {
 	}
 
 	// ============================================
+	// PUBLIC GETTERS FOR BIBLE DATA
+	// ============================================
+
+	getFacts(): ResearchFact[] {
+		return this.bible.facts;
+	}
+
+	getTerminology(): Map<string, string> {
+		return new Map(this.bible.terminology);
+	}
+
+	getAcronyms(): Map<string, string> {
+		return new Map(this.bible.acronyms);
+	}
+
+	getEntities(): Map<string, EntityInfo> {
+		return new Map(this.bible.entities);
+	}
+
+	// ============================================
 	// TERMINOLOGY MANAGEMENT
 	// ============================================
 

@@ -16,7 +16,7 @@ export class ManuscriptEditorModal extends Modal {
 	manifestFile: TFile;
 	loader: ManuscriptLoader;
 	currentTab: EditorTab = 'info';
-	hasUnsavedChanges = false;
+	hasUnsavedChanges: boolean = false;
 
 	constructor(app: App, plugin: LatexPandocConcealerPlugin, manifestFile: TFile, manuscript: ManuscriptProject) {
 		super(app);
@@ -620,7 +620,7 @@ export class ManuscriptEditorModal extends Modal {
 			result.errors.forEach((error) => {
 				const li = errorsList.createEl('li', { cls: 'validation-error-item' });
 				li.createSpan({ cls: 'validation-icon', text: '✗' });
-				li.createSpan({ text: error });
+				li.createSpan({ text: error.message });
 			});
 		}
 
@@ -633,7 +633,7 @@ export class ManuscriptEditorModal extends Modal {
 			result.warnings.forEach((warning) => {
 				const li = warningsList.createEl('li', { cls: 'validation-warning-item' });
 				li.createSpan({ cls: 'validation-icon', text: '⚠' });
-				li.createSpan({ text: warning });
+				li.createSpan({ text: warning.message });
 			});
 		}
 

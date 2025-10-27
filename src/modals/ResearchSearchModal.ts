@@ -81,21 +81,25 @@ export class ResearchSearchModal extends Modal {
 
 		const buttonContainer = footer.createDiv({ cls: 'research-footer-buttons' });
 
-		buttonContainer.createEl('button', {
-			text: 'Add New',
-			cls: 'mod-cta',
-		}).addEventListener('click', () => {
-			this.close();
-			// Open the add fact modal
-			const { ResearchFactModal } = require('./ResearchFactModal');
-			new ResearchFactModal(this.app, this.plugin).open();
-		});
+		buttonContainer
+			.createEl('button', {
+				text: 'Add New',
+				cls: 'mod-cta',
+			})
+			.addEventListener('click', () => {
+				this.close();
+				// Open the add fact modal
+				const { ResearchFactModal } = require('./ResearchFactModal');
+				new ResearchFactModal(this.app, this.plugin).open();
+			});
 
-		buttonContainer.createEl('button', {
-			text: 'Close',
-		}).addEventListener('click', () => {
-			this.close();
-		});
+		buttonContainer
+			.createEl('button', {
+				text: 'Close',
+			})
+			.addEventListener('click', () => {
+				this.close();
+			});
 
 		// Event listeners
 		this.searchInput.addEventListener('input', () => this.performSearch());
@@ -107,43 +111,45 @@ export class ResearchSearchModal extends Modal {
 	}
 
 	private loadFacts() {
-		// Get all facts from Research Bible
-		const bible = this.plugin.researchBible.bible;
-		this.allFacts = bible.facts || [];
+		// Get all facts from Research Bible using public getters
+		this.allFacts = this.plugin.researchBible.getFacts() || [];
 
 		// Also include acronyms and terminology as facts
-		bible.acronyms.forEach((expansion, acronym) => {
+		const acronyms = this.plugin.researchBible.getAcronyms();
+		acronyms.forEach((expansion, acronym) => {
 			this.allFacts.push({
 				id: `acronym-${acronym}`,
 				category: 'acronym',
 				term: acronym,
 				definition: expansion,
 				tags: [],
-				lastUpdated: bible.lastUpdated,
+				lastUpdated: new Date(),
 				references: [],
 			});
 		});
 
-		bible.terminology.forEach((definition, term) => {
+		const terminology = this.plugin.researchBible.getTerminology();
+		terminology.forEach((definition, term) => {
 			this.allFacts.push({
 				id: `term-${term}`,
 				category: 'definition',
 				term: term,
 				definition: definition,
 				tags: [],
-				lastUpdated: bible.lastUpdated,
+				lastUpdated: new Date(),
 				references: [],
 			});
 		});
 
-		bible.entities.forEach((info, name) => {
+		const entities = this.plugin.researchBible.getEntities();
+		entities.forEach((info, name) => {
 			this.allFacts.push({
 				id: `entity-${name}`,
 				category: info.type as FactCategory,
 				term: name,
 				definition: info.description || '',
-				tags: info.relatedTerms || [],
-				lastUpdated: bible.lastUpdated,
+				tags: info.alternateNames || [],
+				lastUpdated: new Date(),
 				references: [],
 			});
 		});
@@ -223,9 +229,7 @@ export class ResearchSearchModal extends Modal {
 			// Click to select
 			resultItem.addEventListener('click', () => {
 				// Remove previous selection
-				this.resultsContainer
-					.querySelectorAll('.research-result-item')
-					.forEach((el) => el.removeClass('selected'));
+				this.resultsContainer.querySelectorAll('.research-result-item').forEach((el) => el.removeClass('selected'));
 
 				// Add selection to this item
 				resultItem.addClass('selected');
@@ -239,9 +243,7 @@ export class ResearchSearchModal extends Modal {
 		// Update count
 		const countEl = this.contentEl.querySelector('.research-count');
 		if (countEl) {
-			countEl.setText(
-				`Showing ${results.length} of ${this.allFacts.length} facts`,
-			);
+			countEl.setText(`Showing ${results.length} of ${this.allFacts.length} facts`);
 		}
 	}
 
@@ -313,24 +315,30 @@ export class ResearchSearchModal extends Modal {
 			cls: 'research-detail-actions',
 		});
 
-		actionsRow.createEl('button', {
-			text: 'Insert into Document',
-			cls: 'mod-cta',
-		}).addEventListener('click', () => this.insertIntoDocument());
+		actionsRow
+			.createEl('button', {
+				text: 'Insert into Document',
+				cls: 'mod-cta',
+			})
+			.addEventListener('click', () => this.insertIntoDocument());
 
-		actionsRow.createEl('button', {
-			text: 'Copy Term',
-		}).addEventListener('click', () => {
-			navigator.clipboard.writeText(fact.term);
-			new Notice('✓ Copied term to clipboard');
-		});
+		actionsRow
+			.createEl('button', {
+				text: 'Copy Term',
+			})
+			.addEventListener('click', () => {
+				navigator.clipboard.writeText(fact.term);
+				new Notice('✓ Copied term to clipboard');
+			});
 
-		actionsRow.createEl('button', {
-			text: 'Copy Definition',
-		}).addEventListener('click', () => {
-			navigator.clipboard.writeText(fact.definition);
-			new Notice('✓ Copied definition to clipboard');
-		});
+		actionsRow
+			.createEl('button', {
+				text: 'Copy Definition',
+			})
+			.addEventListener('click', () => {
+				navigator.clipboard.writeText(fact.definition);
+				new Notice('✓ Copied definition to clipboard');
+			});
 	}
 
 	private insertIntoDocument() {

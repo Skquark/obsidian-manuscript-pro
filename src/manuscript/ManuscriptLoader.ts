@@ -116,7 +116,7 @@ export class ManuscriptLoader {
 
 		// Convert editions
 		if (data.editions) {
-			for (const [key, edition] of Object.entries(data.editions as any)) {
+			for (const [key, edition] of Object.entries(data.editions) as [string, any][]) {
 				manuscript.editions[key] = {
 					name: edition.name || key,
 					identifiers: {
@@ -139,7 +139,7 @@ export class ManuscriptLoader {
 
 		// Convert trim sizes
 		if (data.trim_sizes) {
-			for (const [key, trimSize] of Object.entries(data.trim_sizes as any)) {
+			for (const [key, trimSize] of Object.entries(data.trim_sizes) as [string, any][]) {
 				manuscript.trimSizes[key] = {
 					name: trimSize.name || key,
 					width: trimSize.width,
@@ -157,7 +157,7 @@ export class ManuscriptLoader {
 
 		// Convert profiles
 		if (data.profiles) {
-			for (const [key, profile] of Object.entries(data.profiles as any)) {
+			for (const [key, profile] of Object.entries(data.profiles) as [string, any][]) {
 				manuscript.profiles[key] = {
 					name: key,
 					comment: profile.comment,
@@ -265,7 +265,7 @@ export class ManuscriptLoader {
 		this.validateFileList(manuscript.backmatter, 'backmatter', errors, warnings);
 
 		// Validate editions reference valid trim sizes
-		for (const [editionId, edition] of Object.entries(manuscript.editions || {})) {
+		for (const [editionId, edition] of Object.entries(manuscript.editions || {}) as [string, any][]) {
 			if (!manuscript.trimSizes[edition.trimSize]) {
 				errors.push({
 					path: `editions.${editionId}.trimSize`,
@@ -276,7 +276,7 @@ export class ManuscriptLoader {
 		}
 
 		// Validate ISBN format
-		for (const [editionId, edition] of Object.entries(manuscript.editions || {})) {
+		for (const [editionId, edition] of Object.entries(manuscript.editions || {}) as [string, any][]) {
 			if (edition.identifiers.isbn13 && !this.isValidISBN13(edition.identifiers.isbn13)) {
 				warnings.push({
 					path: `editions.${editionId}.identifiers.isbn13`,
