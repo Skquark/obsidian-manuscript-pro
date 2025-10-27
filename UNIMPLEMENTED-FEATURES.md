@@ -2,60 +2,45 @@
 
 This document tracks features that have placeholder code but are not yet fully implemented.
 
-## High Priority - UI Panels
+## ✅ Completed Features
 
 ### 1. Pre-publication Checklist UI Panel
-**Status**: Placeholder implemented  
-**Location**: `src/main.ts` line 1909-1915  
-**Current behavior**: Exports checklist to console with "UI panel coming soon" notice  
-**Intended behavior**: Display checklist in an interactive UI panel  
-**Code**:
-```typescript
-const checklist = this.checklistManager.getChecklist(activeFile);
-// TODO: Display checklist object in UI panel instead of console
-new Notice('Checklist exported to console (UI panel coming soon)');
-```
+**Status**: ✅ IMPLEMENTED  
+**Location**: `src/views/ChecklistPanelView.ts`  
+**Implementation**: Full ItemView panel with interactive checklist, categories, progress tracking, notes, and export functionality
+**Command**: "Show Pre-Publication Checklist"
 
 ### 2. Progress Stats UI Panel
-**Status**: Placeholder notice  
-**Location**: `src/main.ts` line 1993  
-**Current behavior**: Notice says "Progress stats exported to console (UI panel coming soon)"  
-**Intended behavior**: Display progress statistics in an interactive UI panel
+**Status**: ✅ IMPLEMENTED  
+**Location**: `src/views/ProgressPanelView.ts`  
+**Implementation**: Full ItemView panel with stats cards, goals tracking, session history, auto-refresh, and CSV export
+**Command**: "Show Progress Statistics"
 
 ### 3. Research Fact Input Modal
-**Status**: Placeholder notice  
-**Location**: `src/main.ts` line 2013  
-**Current behavior**: Notice says "Research fact input modal coming soon"  
-**Intended behavior**: Modal for adding research facts to the Research Bible
+**Status**: ✅ IMPLEMENTED  
+**Location**: `src/modals/ResearchFactModal.ts`  
+**Implementation**: Full modal with form for adding research facts (term, category, definition, tags, source)
+**Command**: "Add Research Fact"
 
 ### 4. Research Bible Search Modal
-**Status**: Placeholder notice  
-**Location**: `src/main.ts` line 2027  
-**Current behavior**: Notice says "Research Bible search modal coming soon"  
-**Intended behavior**: Search interface for Research Bible entries
-
-## Medium Priority - Validation Features
+**Status**: ✅ IMPLEMENTED  
+**Location**: `src/modals/ResearchSearchModal.ts`  
+**Implementation**: Full search interface with live search, category filtering, split view, and insert functionality
+**Command**: "Search Research Bible"
 
 ### 5. Citation Bibliography Validation
-**Status**: Stub methods return `true` (always pass)  
-**Location**: `src/quality/PublicationChecklistManager.ts` lines 503-523  
-**Methods**:
-- `checkAllCitationsInBib()` - Check if all citations are in bibliography
-- `checkUnusedBibEntries()` - Check if all bibliography entries are cited  
-- `checkOrphanedCitations()` - Check for citations without bibliography entries
+**Status**: ✅ IMPLEMENTED  
+**Location**: `src/quality/PublicationChecklistManager.ts`  
+**Implementation**: Three fully functional validation methods:
+- `checkCitationsInBibliography()` - Validates all citations exist in bibliography
+- `checkUnusedBibEntries()` - Identifies unused bibliography entries
+- `checkOrphanedCitations()` - Detects orphaned citations
 
-**Current behavior**: All return `true` with "Placeholder" comments  
-**Intended behavior**: Integrate with BibliographyManager to validate citations
-
-**Code**:
-```typescript
-private async checkAllCitationsInBib(): Promise<boolean> {
-    // Check if all citations are in bibliography
-    // Note: bibliographyManager doesn't have validateCitations method yet
-    // This would need to be implemented
-    return true; // Placeholder
-}
-```
+**Features**:
+- Multi-format citation detection (Pandoc, LaTeX, Markdown)
+- Integration with BibliographyManager
+- Console warnings for validation issues
+- Automatic checklist validation
 
 ### 6. Manuscript Editor Confirmation Dialog
 **Status**: TODO comment  
@@ -63,7 +48,7 @@ private async checkAllCitationsInBib(): Promise<boolean> {
 **Current behavior**: No confirmation when making changes  
 **Intended behavior**: Add confirmation dialog before destructive operations
 
-## Low Priority - Enhancements
+## Remaining Low Priority Items
 
 ### 7. Publisher Address in Citations
 **Status**: Field extracted but not used  
