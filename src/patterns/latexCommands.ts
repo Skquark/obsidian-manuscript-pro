@@ -38,10 +38,22 @@ export function createLatexCommandsGroup(): PatternGroup {
 			description: 'Replace \\label{} with label tag emoji',
 		},
 		{
+			regexString: String.raw`\\pageref\{[^}]*\}`,
+			regex: /\\pageref\{[^}]*\}/g,
+			replacement: '📄',
+			description: 'Replace \\pageref{} with page emoji',
+		},
+		{
+			regexString: String.raw`\\(ref|eqref|cref)\{[^}]*\}`,
+			regex: /\\(ref|eqref|cref)\{[^}]*\}/g,
+			replacement: '→',
+			description: 'Replace references with arrow →',
+		},
+		{
 			regexString: String.raw`\\(ref|eqref|cref|pageref)\{`,
 			regex: /\\(ref|eqref|cref|pageref)\{/g,
 			replacement: '→',
-			description: 'Replace references with arrow →',
+			description: 'Replace references with arrow → (fallback for incomplete)',
 		},
 		{
 			regexString: String.raw`§\\ref\{`,
