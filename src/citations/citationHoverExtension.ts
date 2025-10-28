@@ -5,9 +5,9 @@
 
 import { EditorView, hoverTooltip, Tooltip } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
-import { TFile, MarkdownView } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import { BibTeXParser } from './BibTeXParser';
+import { CitationEditorModal } from './CitationEditorModal';
 
 /**
  * Extract citation key at position
@@ -198,50 +198,21 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
     const editBtn = actions.createEl('button', {
         text: '✏️ Edit',
         cls: 'citation-action-button',
-		attr: { title: 'Edit BibTeX entry in source file' },
+		attr: { title: 'Edit BibTeX entry' },
     });
-    editBtn.addEventListener('click', async () => {
-        try {
-            // Get the bibliography file path
-            const bibFile = plugin.bibliographyManager.getBibFileForEntry(entry.key);
-            if (!bibFile) {
-                editBtn.textContent = '✗ Not found';
-                setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
-                return;
-            }
-
-            // Open the file
-            const file = plugin.app.vault.getAbstractFileByPath(bibFile);
-            if (file instanceof TFile) {
-                const leaf = plugin.app.workspace.getLeaf(false);
-                await leaf.openFile(file);
-
-                // Try to scroll to the entry
-                const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-                if (view && 'editor' in view) {
-                    const editor = (view as any).editor;
-                    const content = await plugin.app.vault.read(file);
-                    // Find the entry in the file
-                    const entryPattern = new RegExp(`@\\w+\\{${entry.key}\\s*,`, 'i');
-                    const lines = content.split('\n');
-                    for (let i = 0; i < lines.length; i++) {
-                        if (entryPattern.test(lines[i])) {
-                            editor.setCursor({ line: i, ch: 0 });
-                            editor.scrollIntoView({ from: { line: i, ch: 0 }, to: { line: i + 10, ch: 0 } });
-                            break;
-                        }
-                    }
-                }
-                editBtn.textContent = '✓ Opened';
-                setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
-            } else {
-                editBtn.textContent = '✗ Not found';
+    editBtn.addEventListener('click', () => {
+        // Open citation editor modal
+        const modal = new CitationEditorModal(
+            plugin.app,
+            plugin,
+            entry,
+            () => {
+                // Refresh tooltip after save
+                editBtn.textContent = '✓ Saved';
                 setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
             }
-        } catch (e) {
-            editBtn.textContent = '✗ Failed';
-            setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
-        }
+        );
+        modal.open();
     });
 
     // Open DOI/URL action

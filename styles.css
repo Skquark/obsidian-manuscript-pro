@@ -609,6 +609,61 @@
 }
 
 /* ============================================
+   CITATION EDITOR MODAL
+   ============================================ */
+
+.citation-editor-modal {
+	width: 90%;
+	max-width: 800px;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.citation-editor-modal h2 {
+	margin-bottom: 1em;
+	color: var(--text-accent);
+}
+
+.citation-editor-modal h3 {
+	margin-top: 1.5em;
+	margin-bottom: 0.5em;
+	font-size: 1.1em;
+	color: var(--text-normal);
+}
+
+.citation-meta {
+	background: var(--background-secondary);
+	border-radius: 6px;
+	padding: 0.5em;
+	margin-bottom: 1em;
+}
+
+.citation-fields-editor {
+	background: var(--background-primary-alt);
+	border-radius: 6px;
+	padding: 1em;
+	margin-bottom: 1em;
+}
+
+.citation-field-setting {
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 0.5em 0;
+}
+
+.citation-field-setting:last-child {
+	border-bottom: none;
+}
+
+.citation-editor-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5em;
+	margin-top: 1em;
+	padding-top: 1em;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* ============================================
    CROSS-REFERENCE BROWSER STYLES
    ============================================ */
 
