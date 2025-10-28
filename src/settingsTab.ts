@@ -4,6 +4,9 @@ import { getAllPatternGroups } from './patterns';
 import { TemplateEditorModal } from './export/TemplateEditorModal';
 import { createDefaultTemplate } from './export/TemplateConfiguration';
 import { PresetGalleryModal } from './export/PresetGalleryModal';
+import { addTooltipToSetting } from './help/SettingsTooltipHelper';
+import { TOOLTIP_PRESETS } from './help/TooltipHelper';
+import { addHelpIcon } from './help/HelpIconHelper';
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: LatexPandocConcealerPlugin;
@@ -13,6 +16,21 @@ export class SettingsTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Create a section header with help icon
+	 */
+	private createSectionHeader(container: HTMLElement, title: string, helpTopicId?: string): HTMLElement {
+		const header = container.createEl('h3', { text: title, cls: 'mp-settings-section-title' });
+		if (helpTopicId) {
+			addHelpIcon(header, {
+				topicId: helpTopicId,
+				position: 'header',
+				tooltip: `Learn more about ${title}`,
+			});
+		}
+		return header;
+	}
+
 	display() {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -20,7 +38,7 @@ export class SettingsTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'LaTeX-Pandoc Concealer Settings' });
 
 		// General Settings
-		containerEl.createEl('h3', { text: 'General' });
+		this.createSectionHeader(containerEl, 'General', 'getting-started');
 
 		new Setting(containerEl)
 			.setName('Enable LaTeX-Pandoc Concealer')
@@ -55,7 +73,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Pattern Groups
-		containerEl.createEl('h3', { text: 'Pattern Groups' });
+		this.createSectionHeader(containerEl, 'Pattern Groups', 'concealment');
 
 		const groupsDesc = containerEl.createEl('p', {
 			text: 'Toggle specific pattern groups to customize which syntax elements are concealed. Each group can be toggled independently.',
@@ -122,7 +140,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Profile Management
-		containerEl.createEl('h3', { text: 'Profile Management' });
+		this.createSectionHeader(containerEl, 'Profile Management', 'concealment');
 
 		const profileDesc = containerEl.createEl('p', {
 			text: 'Save and switch between different concealment configurations. Profiles allow you to quickly toggle between different use cases like math review, citation checking, or clean prose writing.',
@@ -337,7 +355,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		// Cursor Revealing
-		containerEl.createEl('h3', { text: 'Cursor Revealing' });
+		this.createSectionHeader(containerEl, 'Cursor Revealing', 'concealment');
 
 		const cursorDesc = containerEl.createEl('p', {
 			text: 'Control how concealed syntax is revealed when the cursor moves to a line.',
@@ -393,7 +411,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Focus Mode Settings
-		containerEl.createEl('h3', { text: 'Focus Mode' });
+		this.createSectionHeader(containerEl, 'Focus Mode', 'focus-mode');
 
 		const focusDesc = containerEl.createEl('p', {
 			text: 'Distraction-free writing environment with markdown concealment and typewriter dimming.',
@@ -401,20 +419,23 @@ export class SettingsTab extends PluginSettingTab {
 		focusDesc.style.color = 'var(--text-muted)';
 		focusDesc.style.marginBottom = '1em';
 
-		new Setting(containerEl)
-			.setName('Enable Focus Mode')
-			.setDesc('Master toggle for Focus Mode features')
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.focusMode.enabled).onChange(async (value) => {
-					this.plugin.settings.focusMode.enabled = value;
-					await this.plugin.saveSettings();
-					if (value) {
-						this.plugin.focusModeManager.enable();
-					} else {
-						this.plugin.focusModeManager.disable();
-					}
-				}),
-			);
+		addTooltipToSetting(
+			new Setting(containerEl)
+				.setName('Enable Focus Mode')
+				.setDesc('Master toggle for Focus Mode features')
+				.addToggle((toggle) =>
+					toggle.setValue(this.plugin.settings.focusMode.enabled).onChange(async (value) => {
+						this.plugin.settings.focusMode.enabled = value;
+						await this.plugin.saveSettings();
+						if (value) {
+							this.plugin.focusModeManager.enable();
+						} else {
+							this.plugin.focusModeManager.disable();
+						}
+					}),
+				),
+			TOOLTIP_PRESETS.focusMode
+		);
 
 		// Markdown Concealment
 		containerEl.createEl('h4', { text: 'Markdown Concealment' });
@@ -466,16 +487,19 @@ export class SettingsTab extends PluginSettingTab {
 		// Typewriter Mode
 		containerEl.createEl('h4', { text: 'Typewriter Mode' });
 
-		new Setting(containerEl)
-			.setName('Enable typewriter mode')
-			.setDesc('Dim non-active text to focus on current writing area')
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.focusMode.typewriterMode).onChange(async (value) => {
-					this.plugin.settings.focusMode.typewriterMode = value;
-					await this.plugin.saveSettings();
-					this.plugin.updateEditorExtension();
-				}),
-			);
+		addTooltipToSetting(
+			new Setting(containerEl)
+				.setName('Enable typewriter mode')
+				.setDesc('Dim non-active text to focus on current writing area')
+				.addToggle((toggle) =>
+					toggle.setValue(this.plugin.settings.focusMode.typewriterMode).onChange(async (value) => {
+						this.plugin.settings.focusMode.typewriterMode = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateEditorExtension();
+					}),
+				),
+			TOOLTIP_PRESETS.typewriterMode
+		);
 
 		new Setting(containerEl)
 			.setName('Active zone')
@@ -592,7 +616,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// UI Settings
-		containerEl.createEl('h3', { text: 'User Interface' });
+		this.createSectionHeader(containerEl, 'User Interface', 'getting-started');
 
 		new Setting(containerEl)
 			.setName('Show status bar indicator')
@@ -626,7 +650,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Statistics Panel Settings
-		containerEl.createEl('h3', { text: 'Manuscript Statistics' });
+		this.createSectionHeader(containerEl, 'Manuscript Statistics', 'statistics');
 
 		const statsDesc = containerEl.createEl('p', {
 			text: 'Track word count, citations, structure, readability metrics, and writing progress over time.',
@@ -717,7 +741,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		// Citation Preview Settings
-		containerEl.createEl('h3', { text: 'Citation Preview' });
+		this.createSectionHeader(containerEl, 'Citation Preview', 'citations');
 
 		const citationDesc = containerEl.createEl('p', {
 			text: 'Show bibliographic information when hovering over citations. Automatically discovers and parses .bib files.',
@@ -725,16 +749,19 @@ export class SettingsTab extends PluginSettingTab {
 		citationDesc.style.color = 'var(--text-muted)';
 		citationDesc.style.marginBottom = '1em';
 
-		new Setting(containerEl)
-			.setName('Enable citation preview')
-			.setDesc('Show tooltips with bibliographic information when hovering over citations')
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.citations.enabled).onChange(async (value) => {
-					this.plugin.settings.citations.enabled = value;
-					await this.plugin.saveSettings();
-					this.plugin.updateEditorExtension();
-				}),
-			);
+		addTooltipToSetting(
+			new Setting(containerEl)
+				.setName('Enable citation preview')
+				.setDesc('Show tooltips with bibliographic information when hovering over citations')
+				.addToggle((toggle) =>
+					toggle.setValue(this.plugin.settings.citations.enabled).onChange(async (value) => {
+						this.plugin.settings.citations.enabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateEditorExtension();
+					}),
+				),
+			TOOLTIP_PRESETS.citations
+		);
 
 		new Setting(containerEl)
 			.setName('Show hover tooltips')
@@ -851,7 +878,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		// Enhanced Bibliography
-		containerEl.createEl('h3', { text: 'Enhanced Bibliography' });
+		this.createSectionHeader(containerEl, 'Enhanced Bibliography', 'citations');
 
 		const enhancedBibDesc = containerEl.createEl('p', {
 			text: 'Advanced citation management: import from DOI/arXiv/PubMed, detect duplicates, and get smart suggestions.',
@@ -1018,7 +1045,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Cross-Reference Intelligence Settings
-		containerEl.createEl('h3', { text: 'Cross-Reference Intelligence' });
+		this.createSectionHeader(containerEl, 'Cross-Reference Intelligence', 'cross-references');
 
 		const crossRefDesc = containerEl.createEl('p', {
 			text: 'Manage LaTeX cross-references (\\label{} and \\ref{}) with auto-completion, validation, and browsing.',
@@ -1026,16 +1053,19 @@ export class SettingsTab extends PluginSettingTab {
 		crossRefDesc.style.color = 'var(--text-muted)';
 		crossRefDesc.style.marginBottom = '1em';
 
-		new Setting(containerEl)
-			.setName('Enable Cross-Reference Intelligence')
-			.setDesc('Master toggle for label indexing and reference features')
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.crossRef.enabled).onChange(async (value) => {
-					this.plugin.settings.crossRef.enabled = value;
-					await this.plugin.saveSettings();
-					this.plugin.updateEditorExtension();
-				}),
-			);
+		addTooltipToSetting(
+			new Setting(containerEl)
+				.setName('Enable Cross-Reference Intelligence')
+				.setDesc('Master toggle for label indexing and reference features')
+				.addToggle((toggle) =>
+					toggle.setValue(this.plugin.settings.crossRef.enabled).onChange(async (value) => {
+						this.plugin.settings.crossRef.enabled = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateEditorExtension();
+					}),
+				),
+			TOOLTIP_PRESETS.crossReferences
+		);
 
 		new Setting(containerEl)
 			.setName('Enable Auto-Completion')
@@ -1169,7 +1199,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		// Manuscript Navigator Settings
-		containerEl.createEl('h3', { text: 'Manuscript Navigator' });
+		this.createSectionHeader(containerEl, 'Manuscript Navigator', 'manuscript-navigator');
 
 		const manuscriptDesc = containerEl.createEl('p', {
 			text: 'Manage your book project with a hierarchical view of chapters and parts. Requires a book.json configuration file.',
@@ -1301,8 +1331,325 @@ export class SettingsTab extends PluginSettingTab {
 				});
 			});
 
+		// Scene/Chapter Outliner
+		this.createSectionHeader(containerEl, 'Scene/Chapter Outliner', 'outliner');
+
+		containerEl.createEl('p', {
+			text: 'Organize and structure your manuscript with a hierarchical scene and chapter outliner. Track scene metadata, word counts, and status.',
+		});
+
+		new Setting(containerEl)
+			.setName('Enable Outliner')
+			.setDesc('Enable the Scene/Chapter Outliner panel')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.enabled).onChange(async (value) => {
+					this.plugin.settings.outliner.enabled = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show in sidebar')
+			.setDesc('Automatically open the outliner in the sidebar when Obsidian starts')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.showInSidebar).onChange(async (value) => {
+					this.plugin.settings.outliner.showInSidebar = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Expand by default')
+			.setDesc('Expand all manuscript items when opening the outliner')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.expandByDefault).onChange(async (value) => {
+					this.plugin.settings.outliner.expandByDefault = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show word counts')
+			.setDesc('Display word counts for scenes and chapters')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.showWordCounts).onChange(async (value) => {
+					this.plugin.settings.outliner.showWordCounts = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show scene metadata')
+			.setDesc('Display scene metadata (POV, setting, timeline, etc.)')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.showSceneMetadata).onChange(async (value) => {
+					this.plugin.settings.outliner.showSceneMetadata = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show status')
+			.setDesc('Display status indicators (draft, revised, final, etc.)')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.outliner.showStatus).onChange(async (value) => {
+					this.plugin.settings.outliner.showStatus = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Open Outliner')
+			.setDesc('Open the Scene/Chapter Outliner panel')
+			.addButton((button) => {
+				button.setButtonText('Open Outliner').onClick(async () => {
+					await this.plugin.activateOutlinerView();
+				});
+			});
+
+		// Character Database
+		this.createSectionHeader(containerEl, 'Character Database', 'characters');
+
+		containerEl.createEl('p', {
+			text: 'Track characters, their appearances, relationships, and development throughout your manuscript.',
+		});
+
+		new Setting(containerEl)
+			.setName('Enable Character Database')
+			.setDesc('Enable the Character Database panel')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.characters.enabled).onChange(async (value) => {
+					this.plugin.settings.characters.enabled = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show in sidebar')
+			.setDesc('Automatically open the character database in the sidebar when Obsidian starts')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.characters.showInSidebar).onChange(async (value) => {
+					this.plugin.settings.characters.showInSidebar = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Group by')
+			.setDesc('How to group characters in the panel')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('role', 'Role')
+					.addOption('importance', 'Importance')
+					.addOption('alphabetical', 'Alphabetical')
+					.addOption('recent', 'Recently Modified')
+					.setValue(this.plugin.settings.characters.groupBy)
+					.onChange(async (value: 'role' | 'importance' | 'alphabetical' | 'recent') => {
+						this.plugin.settings.characters.groupBy = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show appearances')
+			.setDesc('Display character appearances in scenes/chapters')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.characters.showAppearances).onChange(async (value) => {
+					this.plugin.settings.characters.showAppearances = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show relationships')
+			.setDesc('Display character relationships and connections')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.characters.showRelationships).onChange(async (value) => {
+					this.plugin.settings.characters.showRelationships = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Open Character Database')
+			.setDesc('Open the Character Database panel')
+			.addButton((button) => {
+				button.setButtonText('Open Characters').onClick(async () => {
+					await this.plugin.activateCharacterView();
+				});
+			});
+
+		// Research Notes Panel
+		this.createSectionHeader(containerEl, 'Research Notes Panel', 'research');
+
+		containerEl.createEl('p', {
+			text: 'Organize research notes, sources, citations, and reference materials for your manuscript.',
+		});
+
+		new Setting(containerEl)
+			.setName('Enable Research Panel')
+			.setDesc('Enable the Research Notes panel')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.research.enabled).onChange(async (value) => {
+					this.plugin.settings.research.enabled = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show in sidebar')
+			.setDesc('Automatically open the research panel in the sidebar when Obsidian starts')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.research.showInSidebar).onChange(async (value) => {
+					this.plugin.settings.research.showInSidebar = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Group by')
+			.setDesc('How to group research notes in the panel')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('category', 'Category')
+					.addOption('priority', 'Priority')
+					.addOption('status', 'Status')
+					.addOption('recent', 'Recently Modified')
+					.addOption('folders', 'Folders')
+					.setValue(this.plugin.settings.research.groupBy)
+					.onChange(async (value: 'category' | 'priority' | 'status' | 'recent' | 'folders') => {
+						this.plugin.settings.research.groupBy = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show summaries')
+			.setDesc('Display note summaries in the panel')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.research.showSummaries).onChange(async (value) => {
+					this.plugin.settings.research.showSummaries = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show citations')
+			.setDesc('Display citation information for research notes')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.research.showCitations).onChange(async (value) => {
+					this.plugin.settings.research.showCitations = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show tags')
+			.setDesc('Display tags for research notes')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.research.showTags).onChange(async (value) => {
+					this.plugin.settings.research.showTags = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Open Research Panel')
+			.setDesc('Open the Research Notes panel')
+			.addButton((button) => {
+				button.setButtonText('Open Research').onClick(async () => {
+					await this.plugin.activateResearchView();
+				});
+			});
+
+		// Style Consistency Checker
+		this.createSectionHeader(containerEl, 'Style Consistency Checker', 'style-checker');
+
+		containerEl.createEl('p', {
+			text: 'Maintain consistent writing style with custom rules. Check for passive voice, word choice, punctuation, and formatting consistency.',
+		});
+
+		new Setting(containerEl)
+			.setName('Enable Style Checker')
+			.setDesc('Enable the Style Consistency Checker panel')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.enabled).onChange(async (value) => {
+					this.plugin.settings.styleChecker.enabled = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Auto-check on save')
+			.setDesc('Automatically run style checks when you save a file')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.autoCheckOnSave).onChange(async (value) => {
+					this.plugin.settings.styleChecker.autoCheckOnSave = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show inline issues')
+			.setDesc('Display style issues inline in the editor (requires editor restart)')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.showInlineIssues).onChange(async (value) => {
+					this.plugin.settings.styleChecker.showInlineIssues = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show errors')
+			.setDesc('Display error-level style issues')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.showErrors).onChange(async (value) => {
+					this.plugin.settings.styleChecker.showErrors = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show warnings')
+			.setDesc('Display warning-level style issues')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.showWarnings).onChange(async (value) => {
+					this.plugin.settings.styleChecker.showWarnings = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show info')
+			.setDesc('Display informational style suggestions')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.showInfo).onChange(async (value) => {
+					this.plugin.settings.styleChecker.showInfo = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show suggestions')
+			.setDesc('Display style suggestions and recommendations')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.styleChecker.showSuggestions).onChange(async (value) => {
+					this.plugin.settings.styleChecker.showSuggestions = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Open Style Checker')
+			.setDesc('Open the Style Consistency Checker panel')
+			.addButton((button) => {
+				button.setButtonText('Open Style Checker').onClick(async () => {
+					await this.plugin.activateStyleCheckerView();
+				});
+			});
+
 		// Pre-publication Validation
-		containerEl.createEl('h3', { text: 'Pre-publication Validation' });
+		this.createSectionHeader(containerEl, 'Pre-publication Validation', 'validation');
 
 		const validationDesc = containerEl.createEl('p', {
 			text: 'Comprehensive manuscript validation to catch errors before publication. Checks references, citations, figures, tables, equations, and document structure.',
@@ -1436,7 +1783,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		// Export & Publishing
-		containerEl.createEl('h3', { text: 'Export & Publishing' });
+		this.createSectionHeader(containerEl, 'Export & Publishing', 'export');
 
 		const exportDesc = containerEl.createEl('p', {
 			text: 'Export your manuscript to PDF, DOCX, HTML, EPUB, and more using Pandoc. Requires Pandoc to be installed.',
@@ -1619,7 +1966,7 @@ export class SettingsTab extends PluginSettingTab {
 		});
 
 		// Template & Snippet System Settings
-		containerEl.createEl('h3', { text: 'Templates & Snippets' });
+		this.createSectionHeader(containerEl, 'Templates & Snippets', 'templates');
 
 		const templateDesc = containerEl.createEl('p', {
 			text: 'Reusable document templates and content snippets for faster writing. Includes built-in templates for academic papers, chapters, figures, tables, equations, and more.',
@@ -1833,7 +2180,7 @@ export class SettingsTab extends PluginSettingTab {
 		});
 
 		// Advanced Settings
-		containerEl.createEl('h3', { text: 'Advanced' });
+		this.createSectionHeader(containerEl, 'Advanced');
 
 		new Setting(containerEl)
 			.setName('Debug mode')
@@ -1874,7 +2221,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Custom Patterns
-		containerEl.createEl('h3', { text: 'Custom Patterns' });
+		this.createSectionHeader(containerEl, 'Custom Patterns', 'concealment');
 
 		const customDesc = containerEl.createEl('p', {
 			text: 'Add your own regex patterns for additional concealment. Each pattern should be a valid JavaScript regex string.',
@@ -1921,7 +2268,7 @@ export class SettingsTab extends PluginSettingTab {
 		});
 
 		// Reset to Defaults
-		containerEl.createEl('h3', { text: 'Reset' });
+		this.createSectionHeader(containerEl, 'Reset');
 
 		new Setting(containerEl)
 			.setName('Reset to defaults')

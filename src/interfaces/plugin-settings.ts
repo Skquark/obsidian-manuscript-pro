@@ -249,6 +249,92 @@ export interface PluginSettings {
 		};
 	};
 
+	// Scene/Chapter Outliner
+	outliner: {
+		enabled: boolean;
+		showInSidebar: boolean;
+		expandByDefault: boolean;
+		showWordCounts: boolean;
+		showSceneMetadata: boolean;
+		showStatus: boolean;
+		manuscriptStructures?: Record<string, any>; // ManuscriptStructure[]
+		outlinerState?: {
+			currentManuscriptId?: string;
+			expandedItems?: string[];
+		};
+	};
+
+	// Character Database
+	characters: {
+		enabled: boolean;
+		showInSidebar: boolean;
+		groupBy: 'role' | 'importance' | 'alphabetical' | 'recent';
+		showAppearances: boolean;
+		showRelationships: boolean;
+		charactersData?: Record<string, any>; // Character[]
+	};
+
+	// Research Notes Panel
+	research: {
+		enabled: boolean;
+		showInSidebar: boolean;
+		groupBy: 'category' | 'priority' | 'status' | 'recent' | 'folders';
+		showSummaries: boolean;
+		showCitations: boolean;
+		showTags: boolean;
+		researchNotes?: Record<string, any>; // ResearchNote[]
+		researchFolders?: Record<string, any>; // ResearchFolder[]
+	};
+
+	// Style Consistency Checker
+	styleChecker: {
+		enabled: boolean;
+		autoCheckOnSave: boolean;
+		showInlineIssues: boolean;
+		enabledRuleSets: string[];  // IDs of enabled rule sets
+		showErrors: boolean;
+		showWarnings: boolean;
+		showInfo: boolean;
+		showSuggestions: boolean;
+		customRules?: any[];  // StyleRule[] - custom user-defined rules
+	};
+
+	// Timeline/Chronology Tool
+	timeline: {
+		enabled: boolean;
+		showInSidebar: boolean;
+		defaultView: 'list' | 'timeline';
+		sortBy: 'chronological' | 'importance' | 'type' | 'recent';
+		autoDetectConflicts: boolean;
+		showConflictWarnings: boolean;
+		events?: Record<string, any>; // TimelineEvent[]
+	};
+
+	// Panel Management
+	panelManagement: {
+		pinnedPanels: string[]; // Array of panel view types that are pinned
+		panelWorkspaces: {
+			[name: string]: {
+				openPanels: string[]; // Panel view types
+				layout?: string; // Future: panel positions/sizes
+			};
+		};
+		currentWorkspace?: string; // Active workspace name
+		autoRestoreWorkspace: boolean; // Restore workspace on startup
+	};
+
+	// Data Backup & Sync
+	backup: {
+		enabled: boolean; // Enable auto-backup
+		interval: number; // Backup interval in minutes (default: 30)
+		maxBackups: number; // Maximum number of backups to keep (default: 10)
+		backupDirectory: string; // Directory to save backups (default: ".manuscript-pro-backups")
+		includeSettings: boolean; // Include plugin settings in backups
+		includeData: boolean; // Include all plugin data (characters, research, etc.)
+		lastBackupTime?: number; // Timestamp of last backup
+		compressionEnabled: boolean; // Compress backups (future feature)
+	};
+
 	// Advanced
 	debugMode: boolean;
 	customPatterns: string[];
@@ -261,6 +347,25 @@ export interface PluginSettings {
 	// Legacy support for migration
 	regexp?: Array<string>;
 	doConcealEditMode?: boolean;
+
+	// Onboarding & Help
+	onboarding?: {
+		completed: boolean;
+		completedAt?: number;
+		skipped?: boolean;
+	};
+
+	// Quick Tips
+	quickTips?: {
+		enabled: boolean;
+		lastDismissedDate?: string; // YYYY-MM-DD format
+	};
+
+	// Feature Discovery
+	featureDiscovery?: {
+		lastSeenVersion: string; // Last version user saw "What's New" for
+		dismissedFeatures: string[]; // Feature IDs that user has dismissed
+	};
 
 	// License storage (obfuscated)
 	_lic?: string; // Encrypted license data

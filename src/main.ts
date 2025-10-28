@@ -1,5 +1,5 @@
 import { MarkdownView, Plugin, Notice, WorkspaceLeaf, Menu } from 'obsidian';
-import { SettingsTab } from './settingsTab';
+import { TabbedSettingsWrapper } from './settings/TabbedSettingsWrapper';
 import { EditorView } from '@codemirror/view';
 import { Extension } from '@codemirror/state';
 import { concealViewPlugin, workspaceLayoutChangeEffect } from './editorExtensions/conceal-view-plugin';
@@ -46,9 +46,27 @@ import { ResearchFactModal } from './modals/ResearchFactModal';
 import { ResearchSearchModal } from './modals/ResearchSearchModal';
 import { ChecklistPanelView, CHECKLIST_PANEL_VIEW_TYPE } from './views/ChecklistPanelView';
 import { ProgressPanelView, PROGRESS_PANEL_VIEW_TYPE } from './views/ProgressPanelView';
+import { OutlinerManager } from './outliner/OutlinerManager';
+import { OutlinerPanel, OUTLINER_VIEW_TYPE } from './outliner/OutlinerPanel';
+import { CharacterManager } from './characters/CharacterManager';
+import { CharacterPanel, CHARACTER_VIEW_TYPE } from './characters/CharacterPanel';
+import { ResearchManager } from './research/ResearchManager';
+import { ResearchPanel, RESEARCH_VIEW_TYPE } from './research/ResearchPanel';
+import { StyleCheckerPanel, STYLE_CHECKER_VIEW_TYPE } from './styleChecker/StyleCheckerPanel';
+import { TimelineManager } from './timeline/TimelineManager';
+import { TimelinePanel, TIMELINE_VIEW_TYPE } from './timeline/TimelinePanel';
 import { LicenseManager } from './licensing/LicenseManager';
 import { FeatureGate } from './licensing/FeatureGate';
 import { LicenseModal } from './licensing/modals/LicenseModal';
+import { PanelStateManager } from './panelManagement/PanelStateManager';
+import { BackupManager } from './backup/BackupManager';
+import { HelpPanel, HELP_PANEL_VIEW_TYPE } from './help/HelpPanel';
+import { TooltipHelper } from './help/TooltipHelper';
+import { OnboardingModal } from './help/OnboardingModal';
+import { QuickTipManager } from './help/QuickTipManager';
+import { FeatureDiscovery, initFeatureDiscoveryStyles } from './help/FeatureDiscovery';
+import { WhatsNewModal } from './help/WhatsNewModal';
+import { initHelpIconStyles, cleanupHelpIconStyles } from './help/HelpIconHelper';
 
 // Default Settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -238,7 +256,7 @@ const DEFAULT_SETTINGS: PluginSettings = {
 		enableVariableHints: true,
 	},
 
-	// Phase 4A: Quality & Workflow Enhancements
+	// Quality & Workflow Enhancements
 	quality: {
 		// Pre-Publication Checklist
 		checklist: {
@@ -277,6 +295,92 @@ const DEFAULT_SETTINGS: PluginSettings = {
 			highlightPassiveVoice: false,
 			exportReports: true,
 		},
+	},
+
+	// Scene/Chapter Outliner
+	outliner: {
+		enabled: true,
+		showInSidebar: false,
+		expandByDefault: true,
+		showWordCounts: true,
+		showSceneMetadata: true,
+		showStatus: true,
+		manuscriptStructures: {},
+		outlinerState: {
+			currentManuscriptId: undefined,
+			expandedItems: [],
+		},
+	},
+
+	// Character Database
+	characters: {
+		enabled: true,
+		showInSidebar: false,
+		groupBy: 'alphabetical',
+		showAppearances: true,
+		showRelationships: true,
+		charactersData: {},
+	},
+
+	// Research Notes Panel
+	research: {
+		enabled: true,
+		showInSidebar: false,
+		groupBy: 'recent',
+		showSummaries: true,
+		showCitations: true,
+		showTags: true,
+		researchNotes: {},
+		researchFolders: {},
+	},
+
+	// Style Consistency Checker
+	styleChecker: {
+		enabled: true,
+		autoCheckOnSave: false,
+		showInlineIssues: false,
+		enabledRuleSets: ['punctuation', 'formatting', 'readability'],
+		showErrors: true,
+		showWarnings: true,
+		showInfo: true,
+		showSuggestions: true,
+	},
+
+	// Timeline/Chronology Tool
+	timeline: {
+		enabled: true,
+		showInSidebar: false,
+		defaultView: 'list',
+		sortBy: 'chronological',
+		autoDetectConflicts: true,
+		showConflictWarnings: true,
+		events: {},
+	},
+
+	// Panel Management
+	panelManagement: {
+		pinnedPanels: [],
+		panelWorkspaces: {},
+		currentWorkspace: undefined,
+		autoRestoreWorkspace: false,
+	},
+
+	// Data Backup & Sync
+	backup: {
+		enabled: true,
+		interval: 30, // 30 minutes
+		maxBackups: 10,
+		backupDirectory: '.manuscript-pro-backups',
+		includeSettings: true,
+		includeData: true,
+		lastBackupTime: undefined,
+		compressionEnabled: false,
+	},
+
+	// Quick Tips
+	quickTips: {
+		enabled: true,
+		lastDismissedDate: undefined,
 	},
 
 	// Advanced
@@ -337,6 +441,14 @@ export default class ManuscriptProPlugin extends Plugin {
 	readabilityAnalyzer: ReadabilityAnalyzer;
 	licenseManager: LicenseManager;
 	featureGate: FeatureGate;
+	outlinerManager: OutlinerManager | null = null;
+	characterManager: CharacterManager | null = null;
+	researchManager: ResearchManager | null = null;
+	timelineManager: TimelineManager | null = null;
+	panelStateManager: PanelStateManager | null = null;
+	backupManager: BackupManager | null = null;
+	quickTipManager: QuickTipManager | null = null;
+	featureDiscovery: FeatureDiscovery | null = null;
 
 	async loadSettings() {
 		const loadedData = await this.loadData();
@@ -352,6 +464,23 @@ export default class ManuscriptProPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		// Save outliner structures
+		if (this.outlinerManager) {
+			this.settings.outliner.manuscriptStructures = this.outlinerManager.getStructuresForSave();
+		}
+		// Save character database
+		if (this.characterManager) {
+			this.settings.characters.charactersData = this.characterManager.getCharactersForSave();
+		}
+		// Save research notes
+		if (this.researchManager) {
+			this.settings.research.researchNotes = this.researchManager.getNotesForSave();
+			this.settings.research.researchFolders = this.researchManager.getFoldersForSave();
+		}
+		// Save timeline events
+		if (this.timelineManager) {
+			this.settings.timeline.events = this.timelineManager.getEventsForSave();
+		}
 		await this.saveData(this.settings);
 	}
 
@@ -1438,6 +1567,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-stats-panel',
 			name: 'Open Manuscript Statistics Panel',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 's' }],
 			callback: async () => {
 				await this.activateStatsView();
 			},
@@ -1470,6 +1600,57 @@ export default class ManuscriptProPlugin extends Plugin {
 						new Notice('Statistics refreshed');
 					}
 				}
+			},
+		});
+
+		// Help Panel Commands
+		this.addCommand({
+			id: 'open-help-panel',
+			name: 'Open Help & Documentation',
+			hotkeys: [{ modifiers: ['Mod', 'Shift'], key: '/' }],
+			callback: async () => {
+				await this.activateHelpView();
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-help-panel',
+			name: 'Toggle Help Panel',
+			callback: async () => {
+				const leaves = this.app.workspace.getLeavesOfType(HELP_PANEL_VIEW_TYPE);
+				if (leaves.length > 0) {
+					// Close if open
+					this.app.workspace.detachLeavesOfType(HELP_PANEL_VIEW_TYPE);
+				} else {
+					// Open if closed
+					await this.activateHelpView();
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'show-onboarding',
+			name: 'Show Welcome Tour',
+			callback: () => {
+				new OnboardingModal(this.app, this).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'show-quick-tip',
+			name: 'Show Quick Tip',
+			callback: () => {
+				if (this.quickTipManager) {
+					this.quickTipManager.showTip();
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'show-whats-new',
+			name: "Show What's New",
+			callback: () => {
+				new WhatsNewModal(this.app, this).open();
 			},
 		});
 
@@ -1533,6 +1714,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-label-browser',
 			name: 'Open Label Browser',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'l' }],
 			callback: async () => {
 				await this.activateLabelBrowser();
 			},
@@ -1569,6 +1751,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-manuscript-navigator',
 			name: 'Open Manuscript Navigator',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'n' }],
 			callback: async () => {
 				await this.activateManuscriptNavigator();
 			},
@@ -1610,6 +1793,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-validation-panel',
 			name: 'Open Pre-publication Checklist',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'v' }],
 			callback: async () => {
 				await this.activateValidationPanel();
 			},
@@ -1718,6 +1902,93 @@ export default class ManuscriptProPlugin extends Plugin {
 			callback: () => {
 				const modal = new BatchExportModal(this.app, this);
 				modal.open();
+			},
+		});
+
+		// Outliner
+		this.addCommand({
+			id: 'open-outliner',
+			name: 'Open Manuscript Outliner',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'o' }],
+			callback: async () => {
+				await this.activateOutlinerView();
+			},
+		});
+
+		this.addCommand({
+			id: 'export-outline-markdown',
+			name: 'Export Outline to Markdown',
+			callback: async () => {
+				const leaves = this.app.workspace.getLeavesOfType(OUTLINER_VIEW_TYPE);
+				if (leaves.length > 0) {
+					const view = leaves[0].view as OutlinerPanel;
+					await (view as any).exportToMarkdown();
+				} else {
+					new Notice('Please open the Manuscript Outliner first');
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'export-outline-pdf',
+			name: 'Export Outline to PDF',
+			callback: async () => {
+				const leaves = this.app.workspace.getLeavesOfType(OUTLINER_VIEW_TYPE);
+				if (leaves.length > 0) {
+					const view = leaves[0].view as OutlinerPanel;
+					await (view as any).exportToPDF();
+				} else {
+					new Notice('Please open the Manuscript Outliner first');
+				}
+			},
+		});
+
+		// Character Database
+		this.addCommand({
+			id: 'open-character-database',
+			name: 'Open Character Database',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'c' }],
+			callback: async () => {
+				await this.activateCharacterView();
+			},
+		});
+
+		// Research Notes Panel
+		this.addCommand({
+			id: 'open-research-panel',
+			name: 'Open Research Notes',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'r' }],
+			callback: async () => {
+				await this.activateResearchView();
+			},
+		});
+
+		// Style Consistency Checker
+		this.addCommand({
+			id: 'open-style-checker',
+			name: 'Open Style Checker',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'k' }],
+			callback: async () => {
+				await this.activateStyleCheckerView();
+			},
+		});
+
+		this.addCommand({
+			id: 'open-timeline',
+			name: 'Open Timeline',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 't' }],
+			callback: async () => {
+				await this.activateTimelineView();
+			},
+		});
+
+		// Comprehensive Report
+		this.addCommand({
+			id: 'generate-project-report',
+			name: 'Generate Comprehensive Project Report',
+			callback: async () => {
+				const { ComprehensiveReportDialog } = await import('./export/ComprehensiveReportDialog');
+				new ComprehensiveReportDialog(this.app, this).open();
 			},
 		});
 
@@ -2015,7 +2286,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Pre-Publication Checklist Commands (PRO)
+		// Pre-Publication Checklist Commands (PRO)
 		this.addCommand({
 			id: 'show-publication-checklist',
 			name: `Show Pre-Publication Checklist${this.featureGate.getProIndicator()}`,
@@ -2061,7 +2332,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Progress Tracking Commands
+		// Progress Tracking Commands
 		this.addCommand({
 			id: 'start-writing-session',
 			name: 'Start Writing Session',
@@ -2121,7 +2392,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Research Bible Commands (PRO)
+		// Research Bible Commands (PRO)
 		this.addCommand({
 			id: 'add-research-fact',
 			name: `Add Research Fact${this.featureGate.getProIndicator()}`,
@@ -2202,7 +2473,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			},
 		});
 
-		// Phase 4A: Readability Analysis Commands
+		// Readability Analysis Commands
 		this.addCommand({
 			id: 'analyze-readability',
 			name: 'Analyze Document Readability',
@@ -2279,6 +2550,314 @@ export default class ManuscriptProPlugin extends Plugin {
 				console.log('Readability Report:', report);
 			},
 		});
+
+		// Quick Toggle Commands
+		this.addCommand({
+			id: 'toggle-concealment',
+			name: 'Toggle: LaTeX Concealment',
+			callback: () => {
+				this.settings.enabled = !this.settings.enabled;
+				this.saveSettings();
+				this.updateEditorExtension();
+				new Notice(`LaTeX Concealment ${this.settings.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-focus-mode',
+			name: 'Toggle: Focus Mode',
+			callback: async () => {
+				this.settings.focusMode.enabled = !this.settings.focusMode.enabled;
+				await this.saveSettings();
+
+				if (this.focusModeManager) {
+					if (this.settings.focusMode.enabled) {
+						this.focusModeManager.enable();
+					} else {
+						this.focusModeManager.disable();
+					}
+				}
+
+				new Notice(`Focus Mode ${this.settings.focusMode.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-typewriter-mode',
+			name: 'Toggle: Typewriter Mode',
+			callback: async () => {
+				this.settings.focusMode.typewriterMode = !this.settings.focusMode.typewriterMode;
+				await this.saveSettings();
+
+				if (this.focusModeManager) {
+					this.focusModeManager.updateSettings(this.settings);
+				}
+
+				new Notice(`Typewriter Mode ${this.settings.focusMode.typewriterMode ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-citations',
+			name: 'Toggle: Citations',
+			callback: async () => {
+				this.settings.citations.enabled = !this.settings.citations.enabled;
+				await this.saveSettings();
+				new Notice(`Citations ${this.settings.citations.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-cross-references',
+			name: 'Toggle: Cross-References',
+			callback: async () => {
+				this.settings.crossRef.enabled = !this.settings.crossRef.enabled;
+				await this.saveSettings();
+				new Notice(`Cross-References ${this.settings.crossRef.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-markdown-hiding',
+			name: 'Toggle: Hide Markdown Syntax',
+			callback: async () => {
+				this.settings.focusMode.hideMarkdownSyntax = !this.settings.focusMode.hideMarkdownSyntax;
+				await this.saveSettings();
+
+				if (this.focusModeManager) {
+					this.focusModeManager.updateSettings(this.settings);
+				}
+
+				new Notice(`Hide Markdown Syntax ${this.settings.focusMode.hideMarkdownSyntax ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-reading-mode-concealment',
+			name: 'Toggle: Reading Mode Concealment',
+			callback: async () => {
+				this.settings.enableInReadingMode = !this.settings.enableInReadingMode;
+				await this.saveSettings();
+				new Notice(`Reading Mode Concealment ${this.settings.enableInReadingMode ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-cursor-reveal',
+			name: 'Toggle: Cursor Reveal',
+			callback: async () => {
+				this.settings.cursorReveal.enabled = !this.settings.cursorReveal.enabled;
+				await this.saveSettings();
+				this.updateEditorExtension();
+				new Notice(`Cursor Reveal ${this.settings.cursorReveal.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-status-bar',
+			name: 'Toggle: Status Bar',
+			callback: async () => {
+				this.settings.showStatusBar = !this.settings.showStatusBar;
+				await this.saveSettings();
+				this.setupStatusBar();
+				new Notice(`Status Bar ${this.settings.showStatusBar ? 'shown' : 'hidden'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-ribbon-icon',
+			name: 'Toggle: Ribbon Icon',
+			callback: async () => {
+				this.settings.showRibbonIcon = !this.settings.showRibbonIcon;
+				await this.saveSettings();
+				this.setupRibbon();
+				new Notice(`Ribbon Icon ${this.settings.showRibbonIcon ? 'shown' : 'hidden'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-manuscript-navigator',
+			name: 'Toggle: Manuscript Navigator',
+			callback: async () => {
+				this.settings.manuscriptNavigator.enabled = !this.settings.manuscriptNavigator.enabled;
+				await this.saveSettings();
+				new Notice(`Manuscript Navigator ${this.settings.manuscriptNavigator.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-validation',
+			name: 'Toggle: Pre-publication Validation',
+			callback: async () => {
+				this.settings.validation.enabled = !this.settings.validation.enabled;
+				await this.saveSettings();
+				new Notice(`Pre-publication Validation ${this.settings.validation.enabled ? 'enabled' : 'disabled'}`);
+			},
+		});
+
+		// Panel Management Commands
+		this.addCommand({
+			id: 'save-panel-workspace',
+			name: 'Panel: Save Current Workspace',
+			hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'w' }],
+			callback: async () => {
+				const workspaceName = prompt('Enter workspace name:');
+				if (workspaceName && this.panelStateManager) {
+					await this.panelStateManager.saveWorkspace(workspaceName);
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'load-panel-workspace',
+			name: 'Panel: Load Workspace',
+			hotkeys: [{ modifiers: ['Mod', 'Shift', 'Alt'], key: 'w' }],
+			callback: async () => {
+				if (!this.panelStateManager) return;
+
+				const workspaces = this.panelStateManager.getWorkspaceNames();
+				if (workspaces.length === 0) {
+					new Notice('No saved workspaces');
+					return;
+				}
+
+				const workspaceName = prompt(`Select workspace:\n\n${workspaces.join('\n')}`);
+				if (workspaceName && workspaces.includes(workspaceName)) {
+					await this.panelStateManager.loadWorkspace(workspaceName);
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'delete-panel-workspace',
+			name: 'Panel: Delete Workspace',
+			callback: async () => {
+				if (!this.panelStateManager) return;
+
+				const workspaces = this.panelStateManager.getWorkspaceNames();
+				if (workspaces.length === 0) {
+					new Notice('No saved workspaces');
+					return;
+				}
+
+				const workspaceName = prompt(`Enter workspace name to delete:\n\nAvailable: ${workspaces.join(', ')}`);
+				if (workspaceName && workspaces.includes(workspaceName)) {
+					const confirmed = confirm(`Delete workspace "${workspaceName}"?`);
+					if (confirmed) {
+						await this.panelStateManager.deleteWorkspace(workspaceName);
+					}
+				}
+			},
+		});
+
+		// Backup Commands
+		this.addCommand({
+			id: 'create-backup-now',
+			name: 'Backup: Create Backup Now',
+			hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'b' }],
+			callback: async () => {
+				if (!this.backupManager) return;
+				const success = await this.backupManager.performBackup();
+				if (success) {
+					new Notice('Backup created successfully');
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'export-backup-download',
+			name: 'Backup: Export as Download',
+			callback: async () => {
+				if (!this.backupManager) return;
+				await this.backupManager.exportBackupAsDownload();
+			},
+		});
+
+		this.addCommand({
+			id: 'open-backup-browser',
+			name: 'Backup: Browse & Restore Backups',
+			callback: async () => {
+				const { BackupBrowserModal } = await import('./backup/BackupBrowserModal');
+				new BackupBrowserModal(this.app, this).open();
+			},
+		});
+
+		// Panel Sync Commands
+		this.addCommand({
+			id: 'refresh-all-panels',
+			name: 'Panel: Refresh All Panels',
+			hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'r' }],
+			callback: () => {
+				this.refreshAllPanels();
+			},
+		});
+
+		this.addCommand({
+			id: 'close-all-panels',
+			name: 'Panel: Close All Non-Pinned Panels',
+			callback: async () => {
+				if (!this.panelStateManager) return;
+
+				const allPanelTypes = Object.values(PanelStateManager.PANEL_TYPES);
+				let closedCount = 0;
+
+				for (const viewType of allPanelTypes) {
+					// Skip pinned panels
+					if (this.panelStateManager.isPinned(viewType)) {
+						continue;
+					}
+
+					const leaves = this.app.workspace.getLeavesOfType(viewType);
+					if (leaves.length > 0) {
+						this.app.workspace.detachLeavesOfType(viewType);
+						closedCount++;
+					}
+				}
+
+				new Notice(`Closed ${closedCount} panel(s)`);
+			},
+		});
+
+		this.addCommand({
+			id: 'toggle-all-pinned-panels',
+			name: 'Panel: Toggle All Pinned Panels',
+			callback: async () => {
+				if (!this.panelStateManager) return;
+
+				const pinnedPanels = this.settings.panelManagement.pinnedPanels;
+				if (pinnedPanels.length === 0) {
+					new Notice('No pinned panels');
+					return;
+				}
+
+				// Check if any pinned panels are currently open
+				let anyOpen = false;
+				for (const viewType of pinnedPanels) {
+					const leaves = this.app.workspace.getLeavesOfType(viewType);
+					if (leaves.length > 0) {
+						anyOpen = true;
+						break;
+					}
+				}
+
+				if (anyOpen) {
+					// Close all pinned panels
+					for (const viewType of pinnedPanels) {
+						this.app.workspace.detachLeavesOfType(viewType);
+					}
+					new Notice('Closed all pinned panels');
+				} else {
+					// Open all pinned panels
+					for (const viewType of pinnedPanels) {
+						const leaf = this.app.workspace.getRightLeaf(false);
+						if (leaf) {
+							await leaf.setViewState({ type: viewType });
+						}
+					}
+					new Notice('Opened all pinned panels');
+				}
+			},
+		});
 	}
 
 	toggleConcealer() {
@@ -2299,6 +2878,9 @@ export default class ManuscriptProPlugin extends Plugin {
 		await this.loadSettings();
 		await this.loadStatsData();
 		console.log('Loading Manuscript Pro Plugin');
+
+		// Initialize tooltip system
+		TooltipHelper.initStyles();
 
 		// Initialize license manager FIRST (before feature checks)
 		this.licenseManager = new LicenseManager(this);
@@ -2342,7 +2924,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			this.registerEditorSuggest(this.snippetSuggest);
 		}
 
-		// Initialize Phase 4A managers
+		// Initialize quality & workflow managers
 		this.checklistManager = new PublicationChecklistManager(this);
 		this.progressManager = new ProgressTrackingManager(this);
 		this.researchBible = new ResearchBibleManager(this);
@@ -2357,6 +2939,61 @@ export default class ManuscriptProPlugin extends Plugin {
 		if (this.settings.quality?.researchBible?.enabled) {
 			await this.researchBible.initialize();
 		}
+
+		// Initialize outliner
+		this.outlinerManager = new OutlinerManager(this.app);
+		if (this.settings.outliner?.manuscriptStructures) {
+			this.outlinerManager.loadStructures(this.settings.outliner.manuscriptStructures);
+		}
+
+		// Initialize character database
+		this.characterManager = new CharacterManager(this.app);
+		if (this.settings.characters?.charactersData) {
+			this.characterManager.loadCharacters(this.settings.characters.charactersData);
+		}
+
+		// Initialize research notes panel
+		this.researchManager = new ResearchManager(this.app);
+		if (this.settings.research?.researchNotes) {
+			this.researchManager.loadNotes(this.settings.research.researchNotes);
+		}
+		if (this.settings.research?.researchFolders) {
+			this.researchManager.loadFolders(this.settings.research.researchFolders);
+		}
+
+		// Initialize timeline manager
+		this.timelineManager = new TimelineManager(this.app);
+		if (this.settings.timeline?.events) {
+			this.timelineManager.loadEvents(this.settings.timeline.events);
+		}
+
+		// Initialize panel state manager
+		this.panelStateManager = new PanelStateManager(this.app, this);
+
+		// Initialize backup manager
+		this.backupManager = new BackupManager(this.app, this);
+		if (this.settings.backup.enabled) {
+			await this.backupManager.start();
+		}
+
+		// Initialize quick tip manager
+		this.quickTipManager = new QuickTipManager(this.app, this);
+
+		// Initialize feature discovery
+		this.featureDiscovery = new FeatureDiscovery(this.app, this);
+		initFeatureDiscoveryStyles();
+
+		// Initialize help icon styles
+		initHelpIconStyles();
+
+		// Register workspace event to add pin icons to panels when they open
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				if (this.panelStateManager) {
+					this.addPinIconsToAllPanels();
+				}
+			})
+		);
 
 		// Register stats panel view
 		this.registerView(STATS_VIEW_TYPE, (leaf: WorkspaceLeaf) => new StatsPanel(leaf, this));
@@ -2376,6 +3013,42 @@ export default class ManuscriptProPlugin extends Plugin {
 		// Register Progress Panel View
 		this.registerView(PROGRESS_PANEL_VIEW_TYPE, (leaf: WorkspaceLeaf) => new ProgressPanelView(leaf, this));
 
+		// Register Outliner Panel View
+		this.registerView(
+			OUTLINER_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new OutlinerPanel(leaf, this, this.outlinerManager!)
+		);
+
+		// Register Character Database Panel View
+		this.registerView(
+			CHARACTER_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new CharacterPanel(leaf, this, this.characterManager!)
+		);
+
+		// Register Research Notes Panel View
+		this.registerView(
+			RESEARCH_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new ResearchPanel(leaf, this, this.researchManager!)
+		);
+
+		// Register Style Checker Panel View
+		this.registerView(
+			STYLE_CHECKER_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new StyleCheckerPanel(leaf, this)
+		);
+
+		// Register Timeline Panel View
+		this.registerView(
+			TIMELINE_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new TimelinePanel(leaf, this, this.timelineManager!)
+		);
+
+		// Register Help Panel View
+		this.registerView(
+			HELP_PANEL_VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new HelpPanel(leaf, this)
+		);
+
 		// Register commands
 		this.registerCommands();
 
@@ -2386,7 +3059,7 @@ export default class ManuscriptProPlugin extends Plugin {
 
 		// Setup UI
 		this.setupStatusBar();
-		this.addSettingTab(new SettingsTab(this.app, this));
+		this.addSettingTab(new TabbedSettingsWrapper(this.app, this));
 
 		// Defer ribbon icon creation to position it after other plugins
 		this.app.workspace.onLayoutReady(() => {
@@ -2423,6 +3096,57 @@ export default class ManuscriptProPlugin extends Plugin {
 			// Open manuscript navigator if enabled
 			if (this.settings.manuscriptNavigator.enabled && this.settings.manuscriptNavigator.showInSidebar) {
 				this.activateManuscriptNavigator();
+			}
+
+			// Add pin icons to all panels (after slight delay to ensure DOM is ready)
+			setTimeout(() => {
+				this.addPinIconsToAllPanels();
+			}, 100);
+
+			// Restore workspace if enabled
+			if (this.panelStateManager) {
+				this.panelStateManager.restoreWorkspaceOnStartup();
+			}
+
+			// Show onboarding for first-time users
+			if (!this.settings.onboarding?.completed) {
+				// Delay to let UI settle
+				setTimeout(() => {
+					new OnboardingModal(this.app, this).open();
+				}, 1000);
+			}
+
+			// Initialize quick tips (after onboarding to avoid overwhelming users)
+			if (this.quickTipManager) {
+				this.quickTipManager.initialize();
+			}
+
+			// Show "What's New" on version upgrades
+			if (this.featureDiscovery) {
+				const lastSeenVersion = this.settings.featureDiscovery?.lastSeenVersion || '0.0.0';
+				const currentVersion = this.manifest.version;
+
+				// Check if this is a version upgrade (not first install)
+				if (lastSeenVersion !== '0.0.0' && lastSeenVersion !== currentVersion) {
+					const newFeatures = this.featureDiscovery.getNewFeatures();
+					if (newFeatures.length > 0) {
+						// Delay to let UI settle and avoid conflict with onboarding
+						setTimeout(() => {
+							new WhatsNewModal(this.app, this).open();
+						}, 2000);
+					} else {
+						// No new features, just update version
+						this.featureDiscovery.markAllAsSeen();
+					}
+				} else if (lastSeenVersion === '0.0.0') {
+					// First install - set current version without showing modal
+					if (!this.settings.featureDiscovery) {
+						(this.settings as any).featureDiscovery = {};
+					}
+					(this.settings as any).featureDiscovery.lastSeenVersion = currentVersion;
+					(this.settings as any).featureDiscovery.dismissedFeatures = [];
+					this.saveSettings();
+				}
 			}
 		});
 
@@ -2470,6 +3194,39 @@ export default class ManuscriptProPlugin extends Plugin {
 		}
 	}
 
+	async activateHelpView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(HELP_PANEL_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: HELP_PANEL_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create help view in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
 	async activateLabelBrowser() {
 		const { workspace } = this.app;
 
@@ -2493,6 +3250,171 @@ export default class ManuscriptProPlugin extends Plugin {
 			} catch (error) {
 				if (this.settings.debugMode) {
 					console.error('Manuscript Pro: Failed to create label browser in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateOutlinerView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(OUTLINER_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: OUTLINER_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create outliner in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateCharacterView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(CHARACTER_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: CHARACTER_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create character database in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateResearchView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(RESEARCH_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: RESEARCH_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create research panel in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateStyleCheckerView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(STYLE_CHECKER_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: STYLE_CHECKER_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create style checker panel in sidebar:', error);
+				}
+				return;
+			}
+		}
+
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateTimelineView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(TIMELINE_VIEW_TYPE);
+
+		if (leaves.length > 0) {
+			// View already exists, reveal it
+			leaf = leaves[0];
+		} else {
+			// Create new view in right sidebar
+			try {
+				const rightLeaf = workspace.getRightLeaf(false);
+				if (rightLeaf) {
+					await rightLeaf.setViewState({
+						type: TIMELINE_VIEW_TYPE,
+						active: true,
+					});
+					leaf = rightLeaf;
+				}
+			} catch (error) {
+				if (this.settings.debugMode) {
+					console.error('Manuscript Pro: Failed to create timeline panel in sidebar:', error);
 				}
 				return;
 			}
@@ -2673,8 +3595,68 @@ export default class ManuscriptProPlugin extends Plugin {
 		}
 	}
 
+	/**
+	 * Add pin icons to all plugin panels
+	 */
+	private addPinIconsToAllPanels(): void {
+		if (!this.panelStateManager) return;
+
+		const panelTypes = Object.values(PanelStateManager.PANEL_TYPES);
+
+		panelTypes.forEach((viewType) => {
+			const leaves = this.app.workspace.getLeavesOfType(viewType);
+			leaves.forEach((leaf) => {
+				const view = leaf.view;
+				if (view && 'containerEl' in view) {
+					this.panelStateManager!.addPinIcon(view as any);
+				}
+			});
+		});
+	}
+
+	/**
+	 * Refresh all open plugin panels
+	 */
+	private refreshAllPanels(): void {
+		const panelTypes = Object.values(PanelStateManager.PANEL_TYPES);
+		let refreshedCount = 0;
+
+		panelTypes.forEach((viewType) => {
+			const leaves = this.app.workspace.getLeavesOfType(viewType);
+			leaves.forEach((leaf) => {
+				const view = leaf.view;
+				// Call refresh method if it exists
+				if (view && typeof (view as any).refresh === 'function') {
+					(view as any).refresh();
+					refreshedCount++;
+				} else if (view && typeof (view as any).render === 'function') {
+					(view as any).render();
+					refreshedCount++;
+				}
+			});
+		});
+
+		new Notice(`Refreshed ${refreshedCount} panel(s)`);
+	}
+
 	onunload() {
 		console.log('Unloading Manuscript Pro Plugin...');
+
+		// Cleanup tooltip system
+		TooltipHelper.cleanup();
+
+		// Cleanup help icon styles
+		cleanupHelpIconStyles();
+
+		// Stop backup manager
+		if (this.backupManager) {
+			this.backupManager.stop();
+		}
+
+		// Cleanup quick tips
+		if (this.quickTipManager) {
+			this.quickTipManager.cleanup();
+		}
 
 		// Cleanup Focus Mode
 		if (this.focusModeManager) {
@@ -2688,5 +3670,10 @@ export default class ManuscriptProPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VALIDATION_PANEL_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(CHECKLIST_PANEL_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(PROGRESS_PANEL_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(HELP_PANEL_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(OUTLINER_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(CHARACTER_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(RESEARCH_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(STYLE_CHECKER_VIEW_TYPE);
 	}
 }
