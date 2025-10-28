@@ -181,8 +181,18 @@ export class BackupManager {
 	private async ensureBackupDirectoryExists(dirPath: string): Promise<void> {
 		const folder = this.app.vault.getAbstractFileByPath(dirPath);
 
+		// Only create if it doesn't exist or is not a folder
 		if (!folder) {
-			await this.app.vault.createFolder(dirPath);
+			try {
+				await this.app.vault.createFolder(dirPath);
+			} catch (error) {
+				// Ignore "already exists" errors
+				if (!(error instanceof Error && error.message.includes('already exists'))) {
+					throw error;
+				}
+			}
+		} else if (!(folder instanceof TFolder)) {
+			throw new Error(`Backup directory path exists but is not a folder: ${dirPath}`);
 		}
 	}
 
