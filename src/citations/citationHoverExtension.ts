@@ -5,6 +5,7 @@
 
 import { EditorView, hoverTooltip, Tooltip } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
+import { TFile, MarkdownView } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import { BibTeXParser } from './BibTeXParser';
 
@@ -149,20 +150,22 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
     const actions = container.createDiv({ cls: 'citation-actions' });
 
 	const copyKeyBtn = actions.createEl('button', {
-		text: '📋 Copy Key',
+		text: '📋 Key',
 		cls: 'citation-action-button',
+		attr: { title: 'Copy citation key' },
 	});
 	copyKeyBtn.addEventListener('click', () => {
 		navigator.clipboard.writeText(entry.key);
 		copyKeyBtn.textContent = '✓ Copied!';
 		setTimeout(() => {
-			copyKeyBtn.textContent = '📋 Copy Key';
+			copyKeyBtn.textContent = '📋 Key';
 		}, 2000);
 	});
 
 	const copyCitationBtn = actions.createEl('button', {
-		text: '📝 Copy Citation',
+		text: '📝 Citation',
 		cls: 'citation-action-button',
+		attr: { title: 'Copy formatted citation' },
 	});
     copyCitationBtn.addEventListener('click', () => {
         // Copy plain text version (strip HTML)
@@ -170,35 +173,86 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
         navigator.clipboard.writeText(plainText);
         copyCitationBtn.textContent = '✓ Copied!';
         setTimeout(() => {
-            copyCitationBtn.textContent = '📝 Copy Citation';
+            copyCitationBtn.textContent = '📝 Citation';
         }, 2000);
     });
 
     const copyBibBtn = actions.createEl('button', {
-        text: '📚 Copy BibTeX',
+        text: '📚 BibTeX',
         cls: 'citation-action-button',
+		attr: { title: 'Copy BibTeX entry' },
     });
     copyBibBtn.addEventListener('click', () => {
         try {
             const bib = plugin.bibliographyManager.toBibTeX(entry);
             navigator.clipboard.writeText(bib);
             copyBibBtn.textContent = '✓ Copied!';
-            setTimeout(() => (copyBibBtn.textContent = '📚 Copy BibTeX'), 2000);
+            setTimeout(() => (copyBibBtn.textContent = '📚 BibTeX'), 2000);
         } catch (e) {
             copyBibBtn.textContent = '✗ Error';
-            setTimeout(() => (copyBibBtn.textContent = '📚 Copy BibTeX'), 2000);
+            setTimeout(() => (copyBibBtn.textContent = '📚 BibTeX'), 2000);
+        }
+    });
+
+    // Edit BibTeX entry
+    const editBtn = actions.createEl('button', {
+        text: '✏️ Edit',
+        cls: 'citation-action-button',
+		attr: { title: 'Edit BibTeX entry in source file' },
+    });
+    editBtn.addEventListener('click', async () => {
+        try {
+            // Get the bibliography file path
+            const bibFile = plugin.bibliographyManager.getBibFileForEntry(entry.key);
+            if (!bibFile) {
+                editBtn.textContent = '✗ Not found';
+                setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
+                return;
+            }
+
+            // Open the file
+            const file = plugin.app.vault.getAbstractFileByPath(bibFile);
+            if (file instanceof TFile) {
+                const leaf = plugin.app.workspace.getLeaf(false);
+                await leaf.openFile(file);
+
+                // Try to scroll to the entry
+                const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                if (view && 'editor' in view) {
+                    const editor = (view as any).editor;
+                    const content = await plugin.app.vault.read(file);
+                    // Find the entry in the file
+                    const entryPattern = new RegExp(`@\\w+\\{${entry.key}\\s*,`, 'i');
+                    const lines = content.split('\n');
+                    for (let i = 0; i < lines.length; i++) {
+                        if (entryPattern.test(lines[i])) {
+                            editor.setCursor({ line: i, ch: 0 });
+                            editor.scrollIntoView({ from: { line: i, ch: 0 }, to: { line: i + 10, ch: 0 } });
+                            break;
+                        }
+                    }
+                }
+                editBtn.textContent = '✓ Opened';
+                setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
+            } else {
+                editBtn.textContent = '✗ Not found';
+                setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
+            }
+        } catch (e) {
+            editBtn.textContent = '✗ Failed';
+            setTimeout(() => (editBtn.textContent = '✏️ Edit'), 2000);
         }
     });
 
     // Open DOI/URL action
     const openBtn = actions.createEl('button', {
-        text: '🔗 Open DOI/URL',
+        text: '🔗 Link',
         cls: 'citation-action-button',
+		attr: { title: doi ? `Open DOI: ${doi}` : (url ? `Open URL: ${url}` : 'No DOI or URL available') },
     });
     const targetUrl = doi ? `https://doi.org/${doi}` : (url || '');
     if (!targetUrl) {
         openBtn.setAttr('disabled', 'true');
-        openBtn.title = 'No DOI or URL available';
     }
     openBtn.addEventListener('click', async () => {
         if (!targetUrl) return;
@@ -215,8 +269,8 @@ function createCitationTooltip(plugin: LatexPandocConcealerPlugin, key: string):
             try {
                 window.open(targetUrl, '_blank', 'noopener');
             } catch (_) {
-                openBtn.textContent = '✗ Failed to open';
-                setTimeout(() => (openBtn.textContent = '🔗 Open DOI/URL'), 2000);
+                openBtn.textContent = '✗ Failed';
+                setTimeout(() => (openBtn.textContent = '🔗 Link'), 2000);
             }
         }
     });

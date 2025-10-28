@@ -192,6 +192,14 @@ export class BibliographyManager {
 	}
 
 	/**
+	 * Get the bibliography file path for a given entry
+	 */
+	getBibFileForEntry(key: string): string | undefined {
+		const entry = this.entries.get(key);
+		return entry?.file;
+	}
+
+	/**
 	 * Get all citation entries
 	 */
 	getAllCitations(): Map<string, BibEntry> {

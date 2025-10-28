@@ -559,19 +559,22 @@
 /* Quick Actions */
 .citation-actions {
 	display: flex;
-	gap: 0.5em;
+	flex-wrap: wrap;
+	gap: 0.4em;
 	margin-bottom: 0.5em;
 }
 
 .citation-action-button {
-	flex: 1;
-	padding: 0.5em 0.8em;
+	flex: 1 1 auto;
+	min-width: fit-content;
+	padding: 0.4em 0.6em;
 	background: var(--interactive-normal);
 	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
 	cursor: pointer;
 	font-size: 0.85em;
+	white-space: nowrap;
 	transition: all 0.2s ease;
 }
 
