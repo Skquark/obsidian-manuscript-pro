@@ -88,17 +88,36 @@ export class CitationEditorModal extends Modal {
 		});
 
 		// Add new field button
-		new Setting(fieldsDiv).addButton((btn) =>
-			btn
-				.setButtonText('+ Add Field')
-				.setTooltip('Add a new BibTeX field')
-				.onClick(() => {
-					const fieldName = prompt('Enter field name:');
-					if (fieldName && fieldName.trim()) {
-						this.createFieldEditor(fieldsDiv, fieldName.trim(), '');
-					}
-				}),
-		);
+		const addFieldSetting = new Setting(fieldsDiv)
+			.setName('Add new field')
+			.setDesc('Enter field name and click Add');
+
+		let newFieldInput: HTMLInputElement;
+		addFieldSetting
+			.addText((text) => {
+				newFieldInput = text.inputEl;
+				text.setPlaceholder('Field name (e.g., note, keywords)');
+				text.inputEl.style.width = '200px';
+			})
+			.addButton((btn) =>
+				btn
+					.setButtonText('Add')
+					.setTooltip('Add this field')
+					.onClick(() => {
+						const fieldName = newFieldInput.value.trim();
+						if (fieldName) {
+							// Insert before the add field setting
+							const newFieldDiv = fieldsDiv.createDiv();
+							addFieldSetting.settingEl.parentElement?.insertBefore(
+								newFieldDiv,
+								addFieldSetting.settingEl,
+							);
+							this.createFieldEditor(newFieldDiv, fieldName, '');
+							newFieldInput.value = '';
+							newFieldInput.focus();
+						}
+					}),
+			);
 
 		// Action buttons
 		const buttonDiv = contentEl.createDiv({ cls: 'citation-editor-buttons' });
