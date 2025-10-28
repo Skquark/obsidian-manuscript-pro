@@ -18,21 +18,31 @@ function getCitationAtPos(state: EditorState, pos: number): { key: string; from:
 	const lineStart = line.from;
 	const relativePos = pos - lineStart;
 
-	// Pattern for Pandoc citations: [@key], @key, [-@key]
-	const citationPattern = /(?:\[@?-?)([a-zA-Z0-9_\-:]+)(?:\]|(?=[\s,;]))/g;
+	// Pattern for Pandoc citation keys: @key or -@key
+	// Matches in contexts like [@key], [@key1; @key2], or standalone @key
+	const citationPattern = /-?@([a-zA-Z0-9_\-:]+)/g;
 	let match;
 
 	while ((match = citationPattern.exec(lineText)) !== null) {
+		// The citation key is in capture group 1
 		const keyStart = match.index + match[0].indexOf(match[1]);
 		const keyEnd = keyStart + match[1].length;
 
 		// Check if cursor is over the citation key
 		if (relativePos >= keyStart && relativePos <= keyEnd) {
-			return {
-				key: match[1],
-				from: lineStart + keyStart,
-				to: lineStart + keyEnd,
-			};
+			// Verify this is actually inside a citation context
+			// (has [ before it or is preceded by another citation)
+			const beforeMatch = lineText.substring(0, match.index);
+			const hasOpenBracket = beforeMatch.includes('[') && !beforeMatch.substring(beforeMatch.lastIndexOf('[')).includes(']');
+			const isPrecededByCitation = /@[a-zA-Z0-9_\-:]+\s*[;,]\s*$/.test(beforeMatch);
+
+			if (hasOpenBracket || isPrecededByCitation || match.index === 0 || /[\s\[\(]/.test(lineText[match.index - 1])) {
+				return {
+					key: match[1],
+					from: lineStart + keyStart,
+					to: lineStart + keyEnd,
+				};
+			}
 		}
 	}
 
