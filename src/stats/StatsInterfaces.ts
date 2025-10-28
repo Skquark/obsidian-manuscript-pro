@@ -83,15 +83,45 @@ export interface StatsHistory {
 export interface WritingGoal {
 	id: string;
 	name: string;
+	type: 'daily' | 'weekly' | 'project' | 'session';
 	targetWords: number;
 	deadline?: number; // timestamp
 	currentWords: number;
 	createdAt: number;
+	manuscript?: string; // Specific manuscript file or 'all' for global
+	completed?: boolean;
+	completedAt?: number;
+}
+
+export interface DailyGoalProgress {
+	date: string; // YYYY-MM-DD
+	targetWords: number;
+	actualWords: number;
+	achieved: boolean;
+}
+
+export interface WeeklyGoalProgress {
+	weekStart: string; // YYYY-MM-DD (Monday)
+	targetWords: number;
+	actualWords: number;
+	daysWritten: number; // Days with any writing
+}
+
+export interface ProductivityInsights {
+	averageWordsPerDay: number;
+	mostProductiveHour?: number;
+	mostProductiveDayOfWeek?: string;
+	longestStreak: number;
+	currentStreak: number;
+	totalDaysWritten: number;
+	totalWords: number;
 }
 
 export interface StatsData {
 	history: StatsHistory;
 	goals: WritingGoal[];
+	dailyGoalProgress: DailyGoalProgress[]; // Last 365 days
+	weeklyGoalProgress: WeeklyGoalProgress[]; // Last 52 weeks
 	sessionStart: number;
 	sessionWordCount: number;
 }

@@ -1,14 +1,15 @@
 {
 	"name": "obsidian-manuscript-pro",
 	"version": "0.3.0",
-	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export.",
+	"description": "Professional manuscript authoring suite for Obsidian: LaTeX concealment, citations, cross-references, templates, and Pandoc export.",
 	"main": "main.js",
 	"type": "commonjs",
 	"scripts": {
 		"dev": "rollup --config rollup.config.mjs -w --environment BUILD:dev",
 		"build": "rollup --config rollup.config.mjs --environment BUILD:prod && npm run copy-main",
 		"copy-main": "cp build/main.js main.js || copy build\\main.js main.js",
-		"deploy": "npm run build && cmd.exe /c \"cd C:\\\\Projects\\\\obsidian-manuscript-pro && deploy-to-vault.bat C:\\\\Projects\\\\god-is-water-book\""
+		"deploy": "npm run build && cmd.exe /c \"cd C:\\\\Projects\\\\obsidian-manuscript-pro && deploy-to-vault.bat C:\\\\Projects\\\\god-is-water-book\"",
+		"check": "tsc --noEmit"
 	},
 	"repository": {
 		"type": "git",
@@ -16,19 +17,17 @@
 	},
 	"keywords": [
 		"obsidian",
+		"manuscript",
 		"latex",
 		"pandoc",
-		"markdown",
-		"academic-writing",
-		"manuscript",
-		"publishing",
 		"citations",
-		"bibliography",
-		"cross-references",
-		"templates",
-		"export"
+		"bibtex",
+		"academic-writing",
+		"export",
+		"pdf",
+		"docx"
 	],
-	"author": "Alan Bedian (based on Dynamic Text Concealer by Matt Cole Anderson)",
+	"author": "Manuscript Pro Team",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/Skquark/obsidian-manuscript-pro/issues"
@@ -38,6 +37,7 @@
 		"@codemirror/language": "^6.9.2",
 		"@codemirror/state": "^6.3.1",
 		"@codemirror/view": "^6.22.0",
+		"@codemirror/autocomplete": "^6.15.0",
 		"uuid": "^9.0.1"
 	},
 	"devDependencies": {

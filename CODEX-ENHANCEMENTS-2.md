@@ -219,3 +219,8 @@ Safety & Perf
 
 - Export Dialog: live Effective CSL indicator (with existence check and CSL title parsing) and instant refresh on edit/profile change.
 - Settings: Global Default CSL path under Export & Publishing; Export Manager injects default CSL when profiles omit it.
+- Export Engine: no `-t pdf` (uses output extension + `--pdf-engine`).
+- Concealment: delimiter‑only hiding for `@{…}` and indices fallback in Live Preview and Reading Mode.
+- Citations: hover quick actions now include “📚 Copy BibTeX”.
+- Cross‑ref: vault‑wide “Rename Label and Update Refs”.
+- Focus Mode: toggle + status indicator; typewriter/centered layout; dim opacity controls.

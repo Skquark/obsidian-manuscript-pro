@@ -1,10 +1,10 @@
 {
 	"id": "manuscript-pro",
-	"name": "ManuScript Pro",
+	"name": "Manuscript Pro",
 	"version": "0.3.0",
 	"minAppVersion": "0.15.0",
-	"description": "LaTeX & Pandoc Academic Writing & Publishing Toolkit - Complete manuscript management with syntax concealment, citation management, cross-references, templates, and professional export for academic and professional authors.",
-	"author": "ManuScript Pro Team",
-	"authorUrl": "https://github.com/yourusername/obsidian-manuscript-pro",
+	"description": "Professional manuscript authoring suite for Obsidian: LaTeX concealment, citations, cross-references, templates, and Pandoc export.",
+	"author": "Manuscript Pro Team",
+	"authorUrl": "https://github.com/Skquark/obsidian-manuscript-pro",
 	"isDesktopOnly": true
 }

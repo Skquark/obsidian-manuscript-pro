@@ -292,7 +292,9 @@ export class ExportEngine {
 		args.push('-o', outputPath);
 
 		// Format-specific options
-		if (profile.format !== 'markdown') {
+		// Do not pass '-t pdf' — Pandoc derives PDF via output extension and pdf-engine.
+		// Explicit '-t pdf' can be brittle across Pandoc versions.
+		if (profile.format !== 'markdown' && profile.format !== 'pdf') {
 			args.push('-t', profile.format);
 		}
 

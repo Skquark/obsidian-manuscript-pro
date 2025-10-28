@@ -1,25 +1,19 @@
-# ManuScript Pro
+# Manuscript Pro
 
 **LaTeX & Pandoc Academic Writing & Publishing Toolkit**
 
-Transform Obsidian into a professional academic writing environment. ManuScript Pro provides everything you need to write, organize, and publish academic papers, theses, books, and technical documentation—all within your favorite knowledge base.
+Transform Obsidian into a professional academic writing environment. Manuscript Pro provides everything you need to write, organize, and publish academic papers, theses, books, and technical documentation—all within your favorite knowledge base.
+
+**Based on**: [Dynamic Text Concealer](https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer) by Matt Cole Anderson
 
 [![Version](https://img.shields.io/github/v/release/Skquark/obsidian-manuscript-pro)](https://github.com/Skquark/obsidian-manuscript-pro/releases)
 [![License](https://img.shields.io/github/license/Skquark/obsidian-manuscript-pro)](LICENSE)
 
 ---
 
-## 📖 What is ManuScript Pro?
+## 📖 What is Manuscript Pro?
 
-ManuScript Pro bridges the gap between Obsidian's powerful note-taking capabilities and professional academic publishing requirements. If you're writing anything that needs citations, equations, cross-references, or professional formatting—research papers, PhD theses, technical manuals, academic books—this plugin is for you.
-
-### Quick Start
-
-- Install Pandoc and ensure it’s on your PATH (pandoc.org).
-- Enable ManuScript Pro in Obsidian. In settings, turn on “Enable in Live Preview”.
-- Optional: Set a global default CSL in Settings → Export → “Default CSL Style”.
-- Try an export via the command palette: “ManuScript Pro: Export Current File”.
-- Use Focus Mode (Mod+Shift+Z) to write distraction‑free. The status bar indicates focus state; Ctrl+Click cycles zone.
+Manuscript Pro bridges the gap between Obsidian's powerful note-taking capabilities and professional academic publishing requirements. If you're writing anything that needs citations, equations, cross-references, or professional formatting—research papers, PhD theses, technical manuals, academic books—this plugin is for you.
 
 ### The Problem It Solves
 
@@ -51,7 +45,7 @@ $$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$
 
 ### The Solution
 
-ManuScript Pro makes your academic writing clean, readable, and enjoyable:
+Manuscript Pro makes your academic writing clean, readable, and enjoyable:
 
 ```markdown
 The mass-energy equivalence E = mc² was derived by 
@@ -79,7 +73,7 @@ Plus it gives you:
 
 **Hide the noise, see your content.**
 
-ManuScript Pro conceals LaTeX and Pandoc markup in Live Preview mode, making your documents readable while you write. Syntax automatically reveals when your cursor is on that line, so editing is seamless.
+Manuscript Pro conceals LaTeX and Pandoc markup in Live Preview mode, making your documents readable while you write. Syntax automatically reveals when your cursor is on that line, so editing is seamless.
 
 #### What Gets Concealed
 
@@ -147,22 +141,13 @@ Full BibTeX integration with modern enhancements that make citation management a
 - Preview citation details in suggestion list
 
 **Citation Styles**
-
-ManuScript Pro supports citation formatting in two modes:
-
-**Built-in Preview Styles** (for hover tooltips in Live Preview):
+Switch between academic citation formats:
 - APA (7th edition)
-- Chicago (author-date)
+- Chicago (author-date & notes)
 - MLA (9th edition)
-
-These styles format citations for quick reference while writing. They provide fast, approximate formatting without requiring external CSL files.
-
-**CSL Export Styles** (for final output via Pandoc):
-- **Any CSL style** - Download from [Zotero Style Repository](https://www.zotero.org/styles) (10,000+ styles)
-- Set per-export in the Export Dialog, or per-profile, or globally in settings
-- Full Pandoc/citeproc support including IEEE, Vancouver, Harvard, Nature, ACS, etc.
-
-**Important**: Built-in preview styles are for convenience during writing. Your final exported document (PDF/DOCX/HTML) will use whichever CSL file you specify, giving you access to any citation style you need.
+- IEEE
+- Vancouver
+- Harvard
 
 **Hover Previews**
 Hover over any citation to see:
@@ -191,7 +176,7 @@ PubMed ID: 12345678
 → Medical/biological literature
 ```
 
-**Command**: "ManuScript Pro: Import Citation"
+**Command**: "Manuscript Pro: Import Citation"
 
 **🔍 Duplicate Detection**
 
@@ -201,7 +186,7 @@ Find and merge duplicate bibliography entries:
 - Smart suggestions for which version to keep
 - Automatic bibliography cleanup
 
-**Command**: "ManuScript Pro: Find Duplicate Citations"
+**Command**: "Manuscript Pro: Find Duplicate Citations"
 
 **🧠 Smart Citation Suggestions**
 
@@ -572,20 +557,6 @@ Create custom profiles with:
 - Desktop Obsidian (Node.js integration required)
 - LaTeX distribution for PDF export (TeX Live, MiKTeX)
 
-### Export Troubleshooting
-
-- Pandoc not found
-  - Install Pandoc and restart Obsidian so PATH updates apply.
-  - If Pandoc is installed, ensure its folder is in PATH for your OS user, or set a custom path in Settings → Export & Publishing → Pandoc Path.
-- PDF writer errors
-  - PDF uses LaTeX engines via `--pdf-engine`. Ensure a LaTeX distribution is installed.
-  - Try exporting to LaTeX to inspect the generated `.tex` for clues.
-- CSL style not applied
-  - Precedence: dialog override > profile setting > global default.
-  - Use the UI indicators (✓/✗) to verify the selected CSL file exists.
-- Debug Pandoc runs
-  - Enable “Verbose Logging” in Settings → Export to print Pandoc args and output in the developer console.
-
 ### 7. ✅ Pre-Publication Validation
 
 **Catch errors before submission.**
@@ -816,7 +787,7 @@ Statistics: Basic word count
 
 1. Open Obsidian Settings
 2. Go to **Community Plugins** and disable Safe Mode
-3. Click **Browse** and search for "ManuScript Pro"
+3. Click **Browse** and search for "Manuscript Pro"
 4. Click **Install** and then **Enable**
 
 ### Manual Installation
@@ -828,100 +799,14 @@ Statistics: Basic word count
 
 ---
 
-## 🔒 Security & Networking
-
-ManuScript Pro takes security seriously. Here's what you should know:
-
-### Safe Command Execution
-
-**Pandoc Exports**: All exports use Node.js `execFile` with array arguments instead of shell strings. This prevents command injection attacks:
-
-```typescript
-// Safe ✓
-execFile('pandoc', ['-f', 'markdown', '-t', 'pdf', input], ...)
-
-// Unsafe ✗ (NOT used)
-exec(`pandoc -f markdown -t pdf ${input}`)
-```
-
-**Why this matters**: Even if a malicious file path or option were passed, it cannot execute arbitrary shell commands.
-
-### Network Requests
-
-ManuScript Pro makes **optional** network requests only when you explicitly use citation import features:
-
-| Service | Endpoint | Purpose | Data Sent |
-|---------|----------|---------|-----------|
-| **CrossRef** | `https://api.crossref.org/works/{doi}` | DOI → BibTeX | DOI string only |
-| **arXiv** | `https://export.arxiv.org/api/query` | arXiv ID → metadata | arXiv ID only |
-| **PubMed** | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/` | PMID → metadata | PubMed ID only |
-
-**User-Agent Header**: All requests identify as "ObsidianManuscriptPro/version" for API rate limit compliance.
-
-**CrossRef Polite Pool**: You can optionally add your email in settings (`Citations → CrossRef Email`). This gives you access to CrossRef's "polite" rate limits (50 req/s vs 5 req/s). Your email is only sent to CrossRef and only in the User-Agent header.
-
-**No Tracking**: ManuScript Pro never sends:
-- Your vault contents
-- File names or paths
-- Usage analytics
-- Personal information (except optional email to CrossRef as described above)
-
-### File System Access
-
-ManuScript Pro operates entirely within your Obsidian vault:
-- **Read**: Reads `.md`, `.bib`, `.csl`, `.json` files in your vault
-- **Write**: Writes export outputs to configured directories (default: `exports/`)
-- **Index**: Builds in-memory indexes of labels and citations for quick access
-
-**Permissions**: Standard Obsidian plugin permissions (vault read/write). No special privileges required.
-
-### Third-Party Dependencies
-
-All dependencies are audited and pinned to specific versions. See `package.json` for the complete list. Major dependencies:
-- **Obsidian API** - Core functionality
-- **CodeMirror 6** - Editor extensions
-- No analytics or tracking libraries
-
-### Privacy
-
-**100% Local**: All processing happens on your machine. Your writing never leaves your device unless you explicitly export or sync via your chosen method (Git, cloud storage, etc.).
-
-**No Telemetry**: ManuScript Pro collects zero usage statistics or crash reports.
-
-
 ## 🚀 Quick Start Guide
-
-### Accessing Features
-
-**Ribbon Menu** (Click the scroll icon in the left sidebar)
-
-All major features are organized in an easy-to-access ribbon menu:
-
-- **📤 Export** - Quick exports to PDF, DOCX, HTML, EPUB or full export dialog
-- **📚 Citations & Bibliography** - Import citations from DOI/arXiv/PubMed, detect duplicates, reload bibliography
-- **🔗 Cross-References** - Open label browser, index all labels, validate references
-- **📋 Manuscript Tools** - Open navigator, edit project metadata, run pre-publication validation, view statistics
-- **📝 Templates & Snippets** - Insert templates, snippets, figures, tables, equations
-- **👁️ Concealment Groups** - Toggle syntax concealment for different markup types
-- **🎯 Focus Mode** - Enter distraction-free writing mode
-- **⚙️ Settings** - Open plugin settings
-
-**Command Palette** (Ctrl/Cmd + P)
-
-All features are also available via the command palette by searching for "ManuScript Pro".
-
-**Status Bar**
-
-- Shows current profile and enabled concealment groups
-- Click to switch profiles
-- Displays word count and writing statistics (when enabled)
 
 ### For Academic Paper Writers
 
 **Step 1: Set Up Bibliography**
 ```
 1. Create or copy your references.bib file into your vault
-2. Open ManuScript Pro settings → Citations
+2. Open Manuscript Pro settings → Citations
 3. Set bibliography file path to "references.bib"
 4. Choose citation style (e.g., APA)
 ```
@@ -951,7 +836,7 @@ bibliography: references.bib
 **Step 4: Export**
 ```
 1. Open Command Palette
-2. Run "ManuScript Pro: Export Document"
+2. Run "Manuscript Pro: Export Document"
 3. Choose "PDF - Academic"
 4. Select output location
 5. Done!
@@ -1016,7 +901,7 @@ Chapter 3: 8000 words
 
 ### Essential Settings
 
-**Pattern Groups** (Settings → ManuScript Pro → Pattern Groups)
+**Pattern Groups** (Settings → Manuscript Pro → Pattern Groups)
 ```
 ☑ Math Delimiters - Hide $ and $$
 ☑ Citations - Clean [@author] syntax  
@@ -1025,7 +910,7 @@ Chapter 3: 8000 words
 ☑ Indexing & Metadata - Hide \index, comments
 ```
 
-**Citations** (Settings → ManuScript Pro → Citations)
+**Citations** (Settings → Manuscript Pro → Citations)
 ```
 Bibliography File: references.bib
 Citation Style: APA
@@ -1033,7 +918,7 @@ Enable Auto-Completion: ✓
 Show Hover Previews: ✓
 ```
 
-**Export** (Settings → ManuScript Pro → Export)
+**Export** (Settings → Manuscript Pro → Export)
 ```
 Pandoc Path: (auto-detected)
 Default Output Directory: exports/
@@ -1041,7 +926,7 @@ Default Profile: PDF - Academic
 Open After Export: ✓
 ```
 
-**Statistics** (Settings → ManuScript Pro → Statistics)
+**Statistics** (Settings → Manuscript Pro → Statistics)
 ```
 Show in Sidebar: ✓
 Show in Status Bar: ✓
@@ -1208,14 +1093,6 @@ Track manuscript versions:
 
 Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
----
-
-## Compatibility Notes
-
-- RegExp indices fallback: Some Electron builds do not support the `d` (indices) flag for regular expressions. The plugin gracefully degrades by hiding the full match rather than partial delimiters. Concealed content remains intact.
-- Reading Mode concealment: A DOM post‑processor applies conceal rules. It closely matches Live Preview but complex nested markup may be less precise. Toggle “Enable in Reading Mode” as desired.
-- File pickers: On some builds “Browse…” dialogs may be unavailable. Enter file paths manually; the UI will still show existence status when possible.
-
 ### Development Setup
 
 ```bash
@@ -1349,7 +1226,7 @@ Vote on features or suggest new ones in [GitHub Discussions](https://github.com/
 
 **Daily Writing Ritual**
 ```
-1. Open ManuScript Pro statistics panel
+1. Open Manuscript Pro statistics panel
 2. Set session goal (e.g., 500 words)
 3. Enable Focus Mode (Ctrl/Cmd + Shift + F)
 4. Write until goal met
@@ -1456,144 +1333,6 @@ A: The plugin handles thousands of entries efficiently. Use duplicate detection 
 
 ---
 
-## 🔧 Troubleshooting
-
-### Export Issues
-
-**"Pandoc not found" error**
-- **Cause**: Pandoc is not installed or not in system PATH
-- **Solution**: 
-  1. Download and install Pandoc from https://pandoc.org
-  2. Restart Obsidian completely (not just reload)
-  3. Open terminal and verify: `pandoc --version`
-  4. If still not working, manually set Pandoc path in Settings → ManuScript Pro → Export
-
-**PDF export fails with "pdflatex not found"**
-- **Cause**: LaTeX distribution not installed
-- **Solution**:
-  - **Windows**: Install MiKTeX from https://miktex.org
-  - **macOS**: Install MacTeX from https://www.tug.org/mactex/
-  - **Linux**: `sudo apt install texlive-full` or equivalent
-
-**Citations not appearing in export**
-- **Check**:
-  1. Bibliography file exists and path is correct in frontmatter
-  2. Citation keys match exactly (`@smith2023` vs `@Smith2023`)
-  3. .bib file has valid BibTeX syntax
-- **Test**: Try `pandoc --citeproc yourfile.md -o test.pdf` manually
-
-**Cross-references showing "??" or not working**
-- **Cause**: LaTeX needs multiple passes to resolve references
-- **Solution**: This is expected on first export - export twice, or Pandoc/LaTeX will handle automatically
-
-**Math equations not rendering in DOCX**
-- **Note**: Depends on Pandoc version and Word settings
-- **Workaround**: Use PDF export for final math-heavy documents, or try `--mathml` flag
-
-### Performance Issues
-
-**Vault indexing is slow (1000+ files)**
-- **Solution**: Settings → Cross-References → Set "Max Files to Index" to 1000 or lower
-- **Note**: Only frequently-referenced files need indexing
-
-**Statistics panel updates lag**
-- **Solution**: Settings → Statistics → Increase "Refresh Interval" to 10-30 seconds
-
-**Obsidian freezes during large export**
-- **Check**: Task Manager/Activity Monitor for Pandoc process
-- **Solution**: Close other applications, or export in smaller chunks
-
-### Concealment Issues
-
-**Syntax not concealing in Live Preview**
-- **Check**:
-  1. Settings → ManuScript Pro → "Enable in Live Preview" is ON
-  2. Current view mode is Live Preview (not Source Mode or Reading Mode)
-  3. Specific syntax group is enabled (Math Delimiters, Citations, etc.)
-- **Try**: Toggle ManuScript Pro off and on (Ctrl+P → "Toggle ManuScript Pro")
-
-**Concealment reveals when not expected**
-- **Note**: Cursor proximity reveals syntax - this is intentional for editing
-- **Adjust**: Settings → Concealment → "Cursor Reveal Delay" (increase to 200-500ms)
-
-**Math symbols look wrong after concealing**
-- **Cause**: Unicode approximation vs actual LaTeX rendering
-- **Note**: Concealment is for editing comfort - export renders correctly
-
-### Citation & Bibliography Issues
-
-**Autocomplete not showing citations**
-- **Check**:
-  1. Bibliography file loaded (Settings → Citations → Bibliography File)
-  2. File exists and has valid BibTeX entries
-  3. Reload bibliography: Ribbon Menu → Citations & Bibliography → Reload Bibliography
-
-**Duplicate citations detected incorrectly**
-- **Adjust**: Settings → Enhanced Bibliography → "Duplicate Similarity Threshold"
-- **Note**: Lower = stricter matching, higher = more lenient
-
-**Citation hover preview not showing**
-- **Check**: Settings → Citations → "Citation Preview" is enabled
-- **Try**: Reload Obsidian (Ctrl+R)
-
-### Focus Mode Issues
-
-**Focus Mode UI changes not reverting**
-- **Solution**: Toggle Focus Mode off and wait 2 seconds
-- **Manual Reset**: Settings → Appearance → Show/hide UI elements manually
-
-**Typewriter dimming too aggressive**
-- **Adjust**: Settings → Focus Mode → "Dim Opacity" (try 0.5 instead of 0.3)
-- **Disable**: Uncheck "Typewriter Mode" while keeping other Focus Mode features
-
-### General Issues
-
-**Plugin not loading or grayed out**
-- **Check**:
-  1. Community Plugins are enabled (Settings → Community Plugins)
-  2. Restricted Mode is OFF
-  3. Check Developer Console (Ctrl+Shift+I) for errors
-
-**Settings changes not saving**
-- **Cause**: Vault sync conflict or permissions issue
-- **Solution**:
-  1. Disable sync temporarily
-  2. Change setting and wait 5 seconds
-  3. Reload Obsidian
-  4. Re-enable sync
-
-**Features accessible via Command Palette but not ribbon menu**
-- **Note**: This is expected - ribbon menu has most common features
-- **Solution**: Use Ctrl+P to access all 50+ commands
-
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. **Check Documentation**: Review EXPORT-TESTING-GUIDE.md for detailed export testing
-2. **Enable Debug Mode**: Settings → ManuScript Pro → Enable "Verbose Logging"
-3. **Check Console**: Open Developer Console (Ctrl+Shift+I) for error messages
-4. **GitHub Issues**: https://github.com/Skquark/obsidian-manuscript-pro/issues
-   - Search existing issues first
-   - Include: Obsidian version, OS, error messages, steps to reproduce
-
----
-
-## Credits
-
-The syntax concealment feature was inspired by [Dynamic Text Concealer](https://github.com/mattcoleanderson/obsidian-dynamic-text-concealer) by Matt Cole Anderson.
-
----
-
-**ManuScript Pro** - *Write better. Publish faster.*
+**Manuscript Pro** - *Write better. Publish faster.*
 
 Transform your academic writing workflow today.
-- Authoring Tools (LaTeX & Pandoc)
-  - Insert LaTeX Command: Open a searchable palette of common commands (bold/emphasis/tt, sectioning, label/ref/eqref, math, includegraphics). Fill a simple form and insert at cursor or wrap the selection.
-  - Wrap with Environment: Quickly surround text with equation/align/itemize/enumerate/figure blocks.
-  - Edit at Cursor: Place the caret on a LaTeX command or environment and open an editor pre-filled with current values.
-  - Edit Pandoc Attributes: Add or edit trailing `{#id .class key=val}` on the current line via a structured editor.
-- Backslash Completions: Start typing `\inc` to see `\includegraphics[…]` with signature; pick to get guided insertion.
-- Expanded coverage: subfigure, minted/lstlisting, theorem/lemma/proof, autoref, textcite/parencite, product/limit with limits, caption/centering/captionof.
-- Table Wizard: Build Markdown or LaTeX tables with alignment, caption/label. Paste CSV/TSV to auto-fill headers and rows. Options for LaTeX rules (booktabs or \hline), vertical bars, and including \centering. Live preview updates as you tweak options and a one-click Copy Preview is available.
-  - Frontmatter Editor: Structured modal to edit title, authors, date, abstract, keywords, bibliography, CSL, and header-includes with safe round‑trip updates.

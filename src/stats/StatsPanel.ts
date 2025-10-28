@@ -7,6 +7,9 @@ import { ItemView, WorkspaceLeaf, MarkdownView } from 'obsidian';
 import type LatexPandocConcealerPlugin from '../main';
 import { StatsCalculator } from './StatsCalculator';
 import type { ManuscriptStats } from './StatsInterfaces';
+import { GoalTracker } from './GoalTracker';
+import { GoalEditorModal } from './GoalEditorModal';
+import { ContributionHeatmap } from './ContributionHeatmap';
 
 export const STATS_VIEW_TYPE = 'manuscript-stats';
 
@@ -381,47 +384,279 @@ export class StatsPanel extends ItemView {
 	 * Render Goals tab
 	 */
 	private renderGoalsTab(container: HTMLElement): void {
+		const goalTracker = new GoalTracker(this.plugin.statsData);
+
+		// Today's goal dashboard (if daily/weekly goal exists)
+		const todayGoal = goalTracker.getTodayGoalProgress();
+		const weekGoal = goalTracker.getWeekGoalProgress();
+
+		if (todayGoal) {
+			this.renderTodayGoalDashboard(container, goalTracker, todayGoal);
+		} else if (weekGoal) {
+			this.renderWeekGoalDashboard(container, goalTracker, weekGoal);
+		}
+
+		// Contribution heatmap
+		const heatmapSection = container.createDiv({ cls: 'stats-section' });
+		const heatmap = new ContributionHeatmap();
+		const heatmapData = goalTracker.getHeatmapData();
+		heatmap.render(heatmapSection, heatmapData);
+
+		// All goals list
 		const goalsSection = container.createDiv({ cls: 'stats-section' });
-		goalsSection.createEl('h5', { text: '🎯 Writing Goals' });
+		goalsSection.createEl('h5', { text: '🎯 All Goals' });
 
-		const goals = this.plugin.statsData.goals;
+		const goals = this.plugin.statsData.goals.filter((g) => !g.completed);
+		const completedGoals = this.plugin.statsData.goals.filter((g) => g.completed);
 
-		if (goals.length === 0) {
+		if (goals.length === 0 && completedGoals.length === 0) {
 			goalsSection.createEl('p', {
 				text: 'No goals set. Create a goal to track your progress!',
 				cls: 'stats-muted',
 			});
 		} else {
+			// Active goals
 			goals.forEach((goal) => {
-				const goalCard = goalsSection.createDiv({ cls: 'stats-goal-card' });
-				goalCard.createEl('h6', { text: goal.name });
-
-				const progress = this.stats ? Math.min(100, (this.stats.wordCount.total / goal.targetWords) * 100) : 0;
-
-				const progressBar = goalCard.createDiv({ cls: 'stats-progress-bar' });
-				const progressFill = progressBar.createDiv({ cls: 'stats-progress-fill' });
-				progressFill.style.width = `${progress}%`;
-
-				const progressText = goalCard.createEl('p', { cls: 'stats-goal-text' });
-				progressText.textContent = `${this.stats?.wordCount.total.toLocaleString() || 0} / ${goal.targetWords.toLocaleString()} words (${progress.toFixed(1)}%)`;
-
-				if (goal.deadline) {
-					const deadline = new Date(goal.deadline);
-					const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-					goalCard.createEl('p', {
-						text: `Deadline: ${this.formatDate(this.getDateKey(deadline))} (${daysLeft} days left)`,
-						cls: 'stats-goal-deadline',
-					});
-				}
+				this.renderGoalCard(goalsSection, goal, goalTracker);
 			});
+
+			// Completed goals (collapsible)
+			if (completedGoals.length > 0) {
+				const completedSection = goalsSection.createDiv({ cls: 'completed-goals-section' });
+				const completedHeader = completedSection.createEl('h6', {
+					text: `✅ Completed Goals (${completedGoals.length})`,
+					cls: 'completed-goals-header',
+				});
+				completedHeader.style.cursor = 'pointer';
+				completedHeader.style.marginTop = '16px';
+
+				const completedList = completedSection.createDiv({ cls: 'completed-goals-list' });
+				completedList.style.display = 'none';
+
+				completedHeader.onclick = () => {
+					completedList.style.display = completedList.style.display === 'none' ? 'block' : 'none';
+				};
+
+				completedGoals.forEach((goal) => {
+					this.renderGoalCard(completedList, goal, goalTracker);
+				});
+			}
 		}
 
 		// Add goal button
 		const addButton = goalsSection.createEl('button', {
-			text: '+ Add Goal',
+			text: '+ Add New Goal',
 			cls: 'stats-add-goal-button',
 		});
-		addButton.onclick = () => this.promptAddGoal();
+		addButton.onclick = () => {
+			const modal = new GoalEditorModal(this.app, null, (goal) => {
+				goalTracker.createGoal(goal);
+				this.plugin.saveStatsData();
+				this.renderPanel();
+			});
+			modal.open();
+		};
+	}
+
+	/**
+	 * Render today's goal dashboard
+	 */
+	private renderTodayGoalDashboard(container: HTMLElement, tracker: GoalTracker, progress: any): void {
+		const dashboard = container.createDiv({ cls: 'goal-dashboard' });
+
+		const header = dashboard.createDiv({ cls: 'goal-dashboard-header' });
+		header.createEl('h5', { text: "Today's Goal", cls: 'goal-dashboard-title' });
+
+		const insights = tracker.getProductivityInsights();
+		if (insights.currentStreak > 0) {
+			const streakBadge = header.createDiv({ cls: 'goal-streak-badge' });
+			streakBadge.createEl('span', { text: '🔥', cls: 'goal-streak-icon' });
+			streakBadge.createEl('span', { text: `${insights.currentStreak} day streak!` });
+		}
+
+		dashboard.createEl('p', {
+			text: `Write ${progress.target.toLocaleString()} words today`,
+			cls: 'goal-dashboard-subtitle',
+		});
+
+		const progressLarge = dashboard.createDiv({ cls: 'goal-progress-large' });
+
+		const progressLabel = progressLarge.createDiv({ cls: 'goal-progress-label' });
+		progressLabel.createEl('span', {
+			text: `${progress.actual.toLocaleString()} words`,
+			cls: 'goal-progress-current',
+		});
+		progressLabel.createEl('span', {
+			text: `${progress.target.toLocaleString()} words`,
+			cls: 'goal-progress-target',
+		});
+
+		const progressBar = progressLarge.createDiv({ cls: 'goal-progress-bar-large' });
+		const progressFill = progressBar.createDiv({ cls: 'goal-progress-fill-large' });
+		progressFill.style.width = `${progress.percent}%`;
+
+		const progressStats = progressLarge.createDiv({ cls: 'goal-progress-stats' });
+		progressStats.createEl('span', { text: `${progress.percent}% complete` });
+		progressStats.createEl('span', {
+			text: progress.remaining > 0 ? `${progress.remaining.toLocaleString()} to go` : '✅ Goal achieved!',
+		});
+	}
+
+	/**
+	 * Render this week's goal dashboard
+	 */
+	private renderWeekGoalDashboard(container: HTMLElement, tracker: GoalTracker, progress: any): void {
+		const dashboard = container.createDiv({ cls: 'goal-dashboard' });
+
+		const header = dashboard.createDiv({ cls: 'goal-dashboard-header' });
+		header.createEl('h5', { text: "This Week's Goal", cls: 'goal-dashboard-title' });
+
+		const insights = tracker.getProductivityInsights();
+		if (insights.currentStreak > 0) {
+			const streakBadge = header.createDiv({ cls: 'goal-streak-badge' });
+			streakBadge.createEl('span', { text: '🔥', cls: 'goal-streak-icon' });
+			streakBadge.createEl('span', { text: `${insights.currentStreak} day streak!` });
+		}
+
+		dashboard.createEl('p', {
+			text: `Write ${progress.target.toLocaleString()} words this week`,
+			cls: 'goal-dashboard-subtitle',
+		});
+
+		const progressLarge = dashboard.createDiv({ cls: 'goal-progress-large' });
+
+		const progressLabel = progressLarge.createDiv({ cls: 'goal-progress-label' });
+		progressLabel.createEl('span', {
+			text: `${progress.actual.toLocaleString()} words`,
+			cls: 'goal-progress-current',
+		});
+		progressLabel.createEl('span', {
+			text: `${progress.target.toLocaleString()} words`,
+			cls: 'goal-progress-target',
+		});
+
+		const progressBar = progressLarge.createDiv({ cls: 'goal-progress-bar-large' });
+		const progressFill = progressBar.createDiv({ cls: 'goal-progress-fill-large' });
+		progressFill.style.width = `${progress.percent}%`;
+
+		const progressStats = progressLarge.createDiv({ cls: 'goal-progress-stats' });
+		progressStats.createEl('span', { text: `${progress.percent}% • ${progress.daysWritten}/7 days` });
+		progressStats.createEl('span', {
+			text: progress.remaining > 0 ? `${progress.remaining.toLocaleString()} to go` : '✅ Goal achieved!',
+		});
+	}
+
+	/**
+	 * Render individual goal card
+	 */
+	private renderGoalCard(container: HTMLElement, goal: any, tracker: GoalTracker): void {
+		const goalCard = container.createDiv({ cls: 'stats-goal-card' });
+
+		const titleRow = goalCard.createEl('h6');
+		titleRow.createEl('span', { text: goal.name });
+		titleRow.createEl('span', {
+			text: this.getGoalTypeLabel(goal.type),
+			cls: 'stats-goal-type',
+		});
+
+		// Calculate progress based on goal type
+		let progress = 0;
+		let currentWords = 0;
+
+		if (goal.type === 'daily') {
+			const todayProgress = tracker.getTodayGoalProgress();
+			currentWords = todayProgress ? todayProgress.actual : 0;
+			progress = todayProgress ? todayProgress.percent : 0;
+		} else if (goal.type === 'weekly') {
+			const weekProgress = tracker.getWeekGoalProgress();
+			currentWords = weekProgress ? weekProgress.actual : 0;
+			progress = weekProgress ? weekProgress.percent : 0;
+		} else {
+			currentWords = this.stats?.wordCount.total || goal.currentWords || 0;
+			progress = Math.min(100, (currentWords / goal.targetWords) * 100);
+		}
+
+		const progressBar = goalCard.createDiv({ cls: 'stats-progress-bar' });
+		const progressFill = progressBar.createDiv({ cls: 'stats-progress-fill' });
+		progressFill.style.width = `${progress}%`;
+
+		const progressText = goalCard.createEl('p', { cls: 'stats-goal-text' });
+		progressText.textContent = `${currentWords.toLocaleString()} / ${goal.targetWords.toLocaleString()} words (${progress.toFixed(1)}%)`;
+
+		if (goal.deadline) {
+			const deadline = new Date(goal.deadline);
+			const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+			goalCard.createEl('p', {
+				text: `Deadline: ${this.formatDate(this.getDateKey(deadline))} (${daysLeft} days left)`,
+				cls: 'stats-goal-deadline',
+			});
+		} else if (goal.type === 'project') {
+			const estimatedCompletion = tracker.estimateProjectCompletion(goal);
+			if (estimatedCompletion) {
+				goalCard.createEl('p', {
+					text: `Estimated completion: ${this.formatDate(this.getDateKey(estimatedCompletion))}`,
+					cls: 'stats-goal-deadline',
+				});
+			}
+		}
+
+		// Action buttons
+		const actions = goalCard.createDiv({ cls: 'stats-goal-actions' });
+
+		const editBtn = actions.createEl('button', {
+			text: 'Edit',
+			cls: 'stats-goal-action-btn',
+		});
+		editBtn.onclick = () => {
+			const modal = new GoalEditorModal(this.app, goal, (updatedGoal) => {
+				tracker.updateGoal(goal.id, updatedGoal);
+				this.plugin.saveStatsData();
+				this.renderPanel();
+			});
+			modal.open();
+		};
+
+		if (goal.type === 'project' && !goal.completed) {
+			const completeBtn = actions.createEl('button', {
+				text: '✓ Complete',
+				cls: 'stats-goal-action-btn',
+			});
+			completeBtn.onclick = () => {
+				tracker.completeProjectGoal(goal.id);
+				this.plugin.saveStatsData();
+				this.renderPanel();
+			};
+		}
+
+		const deleteBtn = actions.createEl('button', {
+			text: 'Delete',
+			cls: 'stats-goal-action-btn',
+		});
+		deleteBtn.onclick = () => {
+			if (confirm(`Delete goal "${goal.name}"?`)) {
+				tracker.deleteGoal(goal.id);
+				this.plugin.saveStatsData();
+				this.renderPanel();
+			}
+		};
+	}
+
+	/**
+	 * Get goal type label
+	 */
+	private getGoalTypeLabel(type: string): string {
+		switch (type) {
+			case 'daily':
+				return '📅 Daily';
+			case 'weekly':
+				return '📆 Weekly';
+			case 'project':
+				return '📖 Project';
+			case 'session':
+				return '⏱️ Session';
+			default:
+				return type;
+		}
 	}
 
 	/**
@@ -465,36 +700,5 @@ export class StatsPanel extends ItemView {
 	private formatDate(dateKey: string): string {
 		const date = new Date(dateKey);
 		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-	}
-
-	/**
-	 * Prompt user to add a new goal
-	 */
-	private promptAddGoal(): void {
-		// This would show a modal in a full implementation
-		// For now, use simple prompts
-		const name = prompt('Goal name:');
-		if (!name) return;
-
-		const targetWords = parseInt(prompt('Target word count:') || '0');
-		if (!targetWords) return;
-
-		const deadlineStr = prompt('Deadline (YYYY-MM-DD, optional):');
-		let deadline: number | undefined;
-		if (deadlineStr) {
-			deadline = new Date(deadlineStr).getTime();
-		}
-
-		this.plugin.statsData.goals.push({
-			id: Date.now().toString(),
-			name,
-			targetWords,
-			deadline,
-			currentWords: this.stats?.wordCount.total || 0,
-			createdAt: Date.now(),
-		});
-
-		this.plugin.saveStatsData();
-		this.renderPanel();
 	}
 }

@@ -26,6 +26,9 @@ import { ExportDialog } from './export/ExportDialog';
 import { TemplateEditorModal } from './export/TemplateEditorModal';
 import { PresetGalleryModal } from './export/PresetGalleryModal';
 import { createDefaultTemplate } from './export/TemplateConfiguration';
+import { FrontMatterGeneratorModal } from './frontmatter/FrontMatterGeneratorModal';
+import { TocGeneratorModal } from './toc/TocGeneratorModal';
+import { BatchExportModal } from './export/BatchExportModal';
 import { CitationImporter } from './citations/CitationImporter';
 import { DuplicateDetector } from './citations/DuplicateDetector';
 import { CitationSuggestionEngine } from './citations/CitationSuggestionEngine';
@@ -311,6 +314,8 @@ export default class ManuscriptProPlugin extends Plugin {
 	statsData: StatsData = {
 		history: {},
 		goals: [],
+		dailyGoalProgress: [],
+		weeklyGoalProgress: [],
 		sessionStart: 0,
 		sessionWordCount: 0,
 	};
@@ -357,6 +362,8 @@ export default class ManuscriptProPlugin extends Plugin {
 				{
 					history: {},
 					goals: [],
+					dailyGoalProgress: [],
+					weeklyGoalProgress: [],
 					sessionStart: 0,
 					sessionWordCount: 0,
 				},
@@ -457,6 +464,7 @@ export default class ManuscriptProPlugin extends Plugin {
 		if (this.settings.crossRef.enabled && this.settings.crossRef.autoComplete) {
 			this.editorExtensions.push(createRefAutoComplete(this));
 		}
+
 	}
 
 	updateEditorExtension() {
@@ -513,6 +521,7 @@ export default class ManuscriptProPlugin extends Plugin {
 			}
 
 			this.updateStatusBar();
+
 		}
 	}
 
@@ -534,6 +543,7 @@ export default class ManuscriptProPlugin extends Plugin {
 				:	'ManuScript Pro: Inactive\nClick to toggle';
 		}
 	}
+
 
 	setupRibbon() {
 		if (this.settings.showRibbonIcon) {
@@ -1680,6 +1690,33 @@ export default class ManuscriptProPlugin extends Plugin {
 					// Future: Save to export profile or template library
 					console.log('Template configuration:', savedConfig);
 				});
+				modal.open();
+			},
+		});
+
+		this.addCommand({
+			id: 'generate-front-matter',
+			name: 'Generate Front Matter / Cover Pages',
+			callback: () => {
+				const modal = new FrontMatterGeneratorModal(this.app, this);
+				modal.open();
+			},
+		});
+
+		this.addCommand({
+			id: 'generate-table-of-contents',
+			name: 'Generate Table of Contents',
+			callback: () => {
+				const modal = new TocGeneratorModal(this.app, this);
+				modal.open();
+			},
+		});
+
+		this.addCommand({
+			id: 'batch-export',
+			name: 'Batch Export (Multiple Formats)',
+			callback: () => {
+				const modal = new BatchExportModal(this.app, this);
 				modal.open();
 			},
 		});

@@ -32,9 +32,17 @@ This live TODO tracks polish, fixes, and release tasks for Manuscript Pro. For d
 - Export UX: Export Dialog shows live “Effective CSL” with ✓/✗ existence check and parses CSL title; updates instantly on text edit and profile change.
 - Settings: Global Default CSL path added (Export & Publishing) and used automatically when profiles don’t specify CSL.
 - Export Manager: Injects global default CSL into effective profile.
+- Export Engine: Avoids brittle `-t pdf`; relies on output extension and `--pdf-engine` for PDF.
+- Concealment: Delimiter-only hiding for patterns like `@{…}` so inner content remains visible; graceful fallback when RegExp indices are unavailable.
+- Citations: Hover popup adds “📚 Copy BibTeX” (uses `toBibTeX`) and DOI/URL opener fallback.
+- Cross‑references: “Rename Label and Update Refs” updates `\label{…}` and all `\ref`/`\eqref`/`\cref`/`\autoref` usages across the vault.
+- Focus Mode: Status bar indicator + toggle; hotkey (Mod+Shift+Z); typewriter/centered layout; opacity controls; updates indicator on enable/disable.
+- Stats Panel: Auto‑refresh now respects settings cadence and enablement.
 - Quality gating: Renamed phase4→quality across initialization and commands; commands now respect `settings.quality.*`.
-- Focus Mode: status bar refresh on toggle to keep indicator in sync.
 
 ## Additional P0 Checks
 
 - [ ] Verify Reading Mode conceal post‑processor for interleaved matches and no truncation (indices and fallback).
+- [ ] Validate cross‑ref rename against substring keys (e.g., `fig1` vs `fig10`).
+- [ ] Exercise export across PDF/DOCX/HTML/EPUB; confirm global CSL and override precedence.
+- [ ] Confirm Focus Mode commands and status indicator remain in sync after toggle/cycle.
