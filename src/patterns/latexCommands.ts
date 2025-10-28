@@ -62,6 +62,12 @@ export function createLatexCommandsGroup(): PatternGroup {
 			description: 'Replace \\setchapterimage{image}{width} with image emoji',
 		},
 		{
+			regexString: String.raw`\\markboth\{`,
+			regex: /\\markboth\{/g,
+			replacement: '📑',
+			description: 'Replace \\markboth{ with bookmark tabs emoji',
+		},
+		{
 			regexString: String.raw`\\markboth\{[^}]*\}\{[^}]*\}`,
 			regex: /\\markboth\{[^}]*\}\{[^}]*\}/g,
 			replacement: '',
