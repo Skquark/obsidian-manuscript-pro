@@ -14,6 +14,8 @@ import type {
 } from './ExportInterfaces';
 import { TRIM_SIZE_PRESETS, getTrimSizeById, estimatePageCount, countWords } from './TrimSizePresets';
 import { PROFILE_VARIANTS } from './ExportInterfaces';
+import { TemplateBrowserModal } from './templates/TemplateBrowserModal';
+import type { JournalTemplate } from './templates/JournalTemplates';
 
 export class ExportDialog extends Modal {
 	private selectedProfile: ExportProfile;
@@ -105,7 +107,22 @@ export class ExportDialog extends Modal {
 						}
 					}
 				});
-			});
+			})
+			.addButton((btn) =>
+				btn
+					.setButtonText('Browse Templates')
+					.setTooltip('Choose from journal and publisher templates')
+					.onClick(() => {
+						const browser = new TemplateBrowserModal(this.app, this.plugin, (template: JournalTemplate) => {
+							// Apply template as the selected profile
+							this.selectedProfile = template;
+							this.updateProfileInfo();
+							// Refresh the dialog to show new profile
+							this.onOpen();
+						});
+						browser.open();
+					}),
+			);
 
 		// Profile description
 		const profileDesc = contentEl.createDiv({ cls: 'export-profile-desc' });
