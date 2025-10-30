@@ -1,3 +1,6 @@
+import type { TemplateConfiguration } from '../export/TemplateConfiguration';
+import type { ChecklistType, PublicationChecklist } from '../quality/QualityInterfaces';
+
 export interface Pattern {
 	regex: RegExp;
 	regexString: string; // Store string version for serialization
@@ -155,17 +158,27 @@ export interface PluginSettings {
 		profiles: any[]; // ExportProfile[] - avoid circular dependency
 		defaultProfileId?: string;
 
-		templateDirectory?: string;
-		maxConcurrentExports: number;
-		keepIntermediateFiles: boolean;
-		verboseLogging: boolean;
+	templateDirectory?: string;
+	maxConcurrentExports: number;
+	keepIntermediateFiles: boolean;
+	verboseLogging: boolean;
 
-		// PDF compression
-		ghostscriptPath?: string;
+	// PDF compression
+	ghostscriptPath?: string;
 
-		// EPUB validation
-		epubCheckPath?: string;
-	};
+	// EPUB validation
+	epubCheckPath?: string;
+
+	// Template configurations
+	templateConfigs?: Record<string, TemplateConfiguration>;
+	defaultTemplateConfigId?: string;
+	templateAssignments?: Record<string, string>;
+
+	// Generated assets from front matter / metadata tools
+	generatedLatexPreamble?: string;
+	generatedEpubMetadata?: Record<string, string>;
+	generatedAssetsUpdatedAt?: number;
+};
 
 	// Enhanced Bibliography
 	enhancedBib: {
@@ -216,6 +229,7 @@ export interface PluginSettings {
 			showPanel: boolean;
 			autoCheckEnabled: boolean;
 			defaultType: 'academic-paper' | 'thesis' | 'technical-doc' | 'conference-paper' | 'grant-proposal';
+			templates?: Partial<Record<ChecklistType, PublicationChecklist>>;
 		};
 
 		// Enhanced Progress Tracking
@@ -366,6 +380,9 @@ export interface PluginSettings {
 		lastSeenVersion: string; // Last version user saw "What's New" for
 		dismissedFeatures: string[]; // Feature IDs that user has dismissed
 	};
+
+	// Plot Arc Tracker
+	plotArc?: import('../plotArc/PlotArcInterfaces').PlotArcData;
 
 	// License storage (obfuscated)
 	_lic?: string; // Encrypted license data
